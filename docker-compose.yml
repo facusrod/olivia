@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: olivia-mongodb
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: olivia
+    networks:
+      - olivia-network
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: olivia-app
+    restart: always
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    depends_on:
+      - mongodb
+    networks:
+      - olivia-network
+    # Para desarrollo, usa host.docker.internal para acceder a Odoo en localhost
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  mongodb_data:
+
+networks:
+  olivia-network:
+    driver: bridge

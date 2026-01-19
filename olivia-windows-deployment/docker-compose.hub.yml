@@ -1,0 +1,62 @@
+version: '3.8'
+
+# Docker Compose para usar imagen desde Docker Hub
+# Uso: docker-compose -f docker-compose.hub.yml --env-file .env.production up -d
+
+services:
+  mongodb:
+    image: mongo:7
+    container_name: olivia-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      - MONGO_INITDB_DATABASE=olivia
+    networks:
+      - olivia-network
+
+  app:
+    # Cambia 'TU_USUARIO' por tu usuario de Docker Hub
+    image: ${DOCKER_USERNAME:-facundo}/olivia-app:${VERSION:-latest}
+    container_name: olivia-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      # Next.js
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+
+      # Google OAuth
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+
+      # Gemini AI
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+
+      # MongoDB - Conecta al servicio mongodb
+      - MONGODB_URI=mongodb://mongodb:27017/olivia
+
+      # Odoo - localhost en WSL es accesible como host.docker.internal
+      - ODOO_URL=${ODOO_URL:-http://host.docker.internal:8080}
+      - ODOO_DB=${ODOO_DB:-odoo}
+      - ODOO_USERNAME=${ODOO_USERNAME}
+      - ODOO_PASSWORD=${ODOO_PASSWORD}
+
+      - NODE_ENV=production
+    depends_on:
+      - mongodb
+    networks:
+      - olivia-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  mongodb_data:
+    driver: local
+
+networks:
+  olivia-network:
+    driver: bridge

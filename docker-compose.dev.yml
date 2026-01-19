@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: olivia-mongodb-dev
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: olivia
+    networks:
+      - olivia-network
+
+volumes:
+  mongodb_data:
+
+networks:
+  olivia-network:
+    driver: bridge
