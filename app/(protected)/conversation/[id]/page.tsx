@@ -52,7 +52,7 @@ export default function ConversationPage() {
     } catch (error) {
       console.error('Error:', error);
       alert('Error al cargar la conversación');
-      router.push('/history');
+      router.push('/chat');
     } finally {
       setLoadingConversation(false);
     }

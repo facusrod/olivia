@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ShoppingCart, TrendingUp, AlertTriangle, Loader2, RefreshCw } from 'lucide-react';
+import { ShoppingCart, TrendingUp, AlertTriangle, Loader2, RefreshCw, Sparkles } from 'lucide-react';
 
 interface Product {
   id: number;
@@ -20,17 +20,22 @@ interface SuggestionsData {
   lowStock: Product[];
   topSelling: TopSelling[];
   analysis: string;
-  generatedAt: string;
+  generatedAt: string | null;
+  message?: string;
 }
 
 export default function SuggestionsPage() {
   const [data, setData] = useState<SuggestionsData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [generating, setGenerating] = useState(false);
 
-  const loadSuggestions = async () => {
+  // Cargar las últimas sugerencias guardadas (sin generar nuevas)
+  const loadLastSuggestions = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/purchase-suggestions');
+      const response = await fetch('/api/purchase-suggestions', {
+        method: 'GET',
+      });
       if (!response.ok) throw new Error('Error al cargar sugerencias');
 
       const result = await response.json();
@@ -42,8 +47,26 @@ export default function SuggestionsPage() {
     }
   };
 
+  // Generar nuevas sugerencias con IA
+  const generateNewSuggestions = async () => {
+    try {
+      setGenerating(true);
+      const response = await fetch('/api/purchase-suggestions', {
+        method: 'POST',
+      });
+      if (!response.ok) throw new Error('Error al generar sugerencias');
+
+      const result = await response.json();
+      setData(result);
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   useEffect(() => {
-    loadSuggestions();
+    loadLastSuggestions();
   }, []);
 
   if (loading) {
@@ -62,6 +85,9 @@ export default function SuggestionsPage() {
     );
   }
 
+  // Si no hay sugerencias generadas aún
+  const hasNoSuggestions = !data.generatedAt || data.lowStock.length === 0;
+
   return (
     <div className="p-6">
       {/* Header */}
@@ -75,17 +101,57 @@ export default function SuggestionsPage() {
           </p>
         </div>
         <button
-          onClick={loadSuggestions}
-          disabled={loading}
+          onClick={generateNewSuggestions}
+          disabled={generating}
           className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 transition-colors"
         >
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          Actualizar
+          {generating ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Generando...
+            </>
+          ) : (
+            <>
+              <Sparkles className="w-4 h-4" />
+              Generar con IA
+            </>
+          )}
         </button>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+      {/* Mensaje cuando no hay sugerencias */}
+      {hasNoSuggestions && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-8 mb-6 text-center">
+          <Sparkles className="w-12 h-12 text-blue-500 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            No hay sugerencias generadas
+          </h3>
+          <p className="text-gray-600 mb-4">
+            {data.message || 'Presiona "Generar con IA" para crear un análisis de compras basado en tus datos de ventas y stock actual.'}
+          </p>
+          <button
+            onClick={generateNewSuggestions}
+            disabled={generating}
+            className="inline-flex items-center gap-2 px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 transition-colors"
+          >
+            {generating ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Generando análisis...
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-5 h-5" />
+                Generar Sugerencias
+              </>
+            )}
+          </button>
+        </div>
+      )}
+
+      {/* Stats Cards - Solo mostrar si hay sugerencias */}
+      {!hasNoSuggestions && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-6 rounded-xl border border-orange-200">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center">
@@ -163,42 +229,47 @@ export default function SuggestionsPage() {
             ))}
           </div>
         </div>
-      </div>
+        </div>
+      )}
 
-      {/* AI Analysis */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
-            <ShoppingCart className="w-6 h-6 text-primary-600" />
+      {/* AI Analysis - Solo mostrar si hay análisis */}
+      {!hasNoSuggestions && data.analysis && (
+        <>
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
+                <ShoppingCart className="w-6 h-6 text-primary-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Análisis y Recomendaciones de IA
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Generado por Gemini AI -{' '}
+                  {data.generatedAt && new Date(data.generatedAt).toLocaleString('es-ES')}
+                </p>
+              </div>
+            </div>
+
+            <div className="prose max-w-none">
+              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <pre className="whitespace-pre-wrap text-sm text-gray-700 font-sans">
+                  {data.analysis}
+                </pre>
+              </div>
+            </div>
           </div>
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900">
-              Análisis y Recomendaciones de IA
-            </h3>
-            <p className="text-sm text-gray-600">
-              Generado por Gemini AI -{' '}
-              {new Date(data.generatedAt).toLocaleString('es-ES')}
+
+          {/* Action Note */}
+          <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <p className="text-sm text-blue-800">
+              <strong>Nota:</strong> Estas sugerencias son generadas automáticamente
+              basadas en el análisis de tus datos de ventas y stock actual. Revisa con
+              tu proveedor antes de realizar órdenes de compra.
             </p>
           </div>
-        </div>
-
-        <div className="prose max-w-none">
-          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-            <pre className="whitespace-pre-wrap text-sm text-gray-700 font-sans">
-              {data.analysis}
-            </pre>
-          </div>
-        </div>
-      </div>
-
-      {/* Action Note */}
-      <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <p className="text-sm text-blue-800">
-          <strong>Nota:</strong> Estas sugerencias son generadas automáticamente
-          basadas en el análisis de tus datos de ventas y stock actual. Revisa con
-          tu proveedor antes de realizar órdenes de compra.
-        </p>
-      </div>
+        </>
+      )}
     </div>
   );
 }

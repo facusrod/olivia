@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Send, Loader2, Sparkles } from 'lucide-react';
+import ChatSidebar from '@/components/ChatSidebar';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -14,6 +15,7 @@ export default function ChatPage() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [loadingConversation, setLoadingConversation] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -91,20 +93,66 @@ export default function ChatPage() {
     'Productos más vendidos este mes',
   ];
 
-  return (
-    <div className="flex flex-col h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white px-6 py-4">
-        <h1 className="text-2xl font-bold text-gray-900">Chat con OlivIA</h1>
-        <p className="text-sm text-gray-600 mt-1">
-          Pregunta sobre productos, stock, ventas y más
-        </p>
-      </div>
+  // Cargar una conversación existente
+  const loadConversation = async (convId: string) => {
+    try {
+      setLoadingConversation(true);
+      const response = await fetch(`/api/conversations/${convId}`);
+      if (!response.ok) throw new Error('Error al cargar conversación');
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-4">
-        {messages.length === 0 ? (
-          <div className="text-center py-12">
+      const data = await response.json();
+
+      // Convertir mensajes del formato de BD al formato local
+      const loadedMessages: Message[] = data.messages.map((msg: any) => ({
+        role: msg.role,
+        content: msg.content,
+        timestamp: new Date(msg.timestamp),
+      }));
+
+      setMessages(loadedMessages);
+      setConversationId(convId);
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error al cargar la conversación');
+    } finally {
+      setLoadingConversation(false);
+    }
+  };
+
+  // Crear un nuevo chat (limpiar todo)
+  const handleNewChat = () => {
+    setMessages([]);
+    setConversationId(null);
+    setInput('');
+  };
+
+  return (
+    <div className="flex h-screen bg-gray-50">
+      {/* Sidebar */}
+      <ChatSidebar
+        currentConversationId={conversationId}
+        onSelectConversation={loadConversation}
+        onNewChat={handleNewChat}
+      />
+
+      {/* Main Chat Area */}
+      <div className="flex flex-col flex-1">
+        {/* Header */}
+        <div className="bg-white px-6 py-4 border-b border-gray-200">
+          <h1 className="text-2xl font-bold text-gray-900">Chat con OlivIA</h1>
+          <p className="text-sm text-gray-600 mt-1">
+            Pregunta sobre productos, stock, ventas y más
+          </p>
+        </div>
+
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+          {loadingConversation ? (
+            <div className="flex items-center justify-center h-full">
+              <Loader2 className="w-8 h-8 animate-spin text-primary-600" />
+            </div>
+          ) : messages.length === 0 ? (
+            <div className="text-center py-12">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-100 rounded-full mb-4">
               <Sparkles className="w-8 h-8 text-primary-600" />
             </div>
@@ -127,10 +175,10 @@ export default function ChatPage() {
                 </button>
               ))}
             </div>
-          </div>
-        ) : (
-          <>
-            {messages.map((message, idx) => (
+            </div>
+          ) : (
+            <>
+              {messages.map((message, idx) => (
               <div
                 key={idx}
                 className={`flex ${
@@ -170,10 +218,10 @@ export default function ChatPage() {
             <div ref={messagesEndRef} />
           </>
         )}
-      </div>
+        </div>
 
-      {/* Input */}
-      <div className="bg-gray-50 p-4">
+        {/* Input */}
+        <div className="bg-gray-50 p-4">
         <form onSubmit={sendMessage} className="max-w-4xl mx-auto">
           <div className="flex gap-3 items-center">
             <input
@@ -197,6 +245,7 @@ export default function ChatPage() {
             </button>
           </div>
         </form>
+        </div>
       </div>
     </div>
   );

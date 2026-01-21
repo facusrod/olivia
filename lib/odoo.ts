@@ -196,6 +196,33 @@ class OdooClient {
     });
   }
 
+  // Método genérico para obtener órdenes (intenta POS primero, luego Sales)
+  async getOrders(filters: any[] = [], limit: number = 100): Promise<any[]> {
+    try {
+      // Intentar primero con POS orders
+      const posOrders = await this.executeKw('pos.order', 'search_read', [filters], {
+        fields: ['id', 'name', 'partner_id', 'date_order', 'amount_total', 'state'],
+        limit,
+        order: 'date_order desc',
+      });
+      return posOrders;
+    } catch (posError) {
+      // Si falla POS, intentar con Sale Orders
+      try {
+        const saleOrders = await this.executeKw('sale.order', 'search_read', [filters], {
+          fields: ['id', 'name', 'partner_id', 'date_order', 'amount_total', 'state'],
+          limit,
+          order: 'date_order desc',
+        });
+        return saleOrders;
+      } catch (saleError) {
+        console.error('Error getting orders from both POS and Sales:', { posError, saleError });
+        // Retornar array vacío si ambos fallan
+        return [];
+      }
+    }
+  }
+
   // ========== ÓRDENES DE COMPRA ==========
   async getPurchaseOrders(filters: any[] = [], limit: number = 100): Promise<OdooPurchaseOrder[]> {
     return this.executeKw('purchase.order', 'search_read', [filters], {

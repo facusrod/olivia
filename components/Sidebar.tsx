@@ -5,12 +5,12 @@ import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import { useEffect, useState } from 'react';
 import {
+  LayoutDashboard,
   MessageSquare,
   Package,
   ShoppingCart,
   Sprout,
   LogOut,
-  History,
 } from 'lucide-react';
 
 export default function Sidebar() {
@@ -22,6 +22,11 @@ export default function Sidebar() {
   }, []);
 
   const links = [
+    {
+      href: '/dashboard',
+      label: 'Dashboard',
+      icon: LayoutDashboard,
+    },
     {
       href: '/chat',
       label: 'Chat',
@@ -36,11 +41,6 @@ export default function Sidebar() {
       href: '/suggestions',
       label: 'Sugerencias de Compra',
       icon: ShoppingCart,
-    },
-    {
-      href: '/history',
-      label: 'Historial',
-      icon: History,
     },
   ];
 
