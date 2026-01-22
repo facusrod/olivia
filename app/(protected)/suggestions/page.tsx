@@ -93,7 +93,7 @@ export default function SuggestionsPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-normal text-gray-900 mb-2">
+          <h1 className="text-2xl text-gray-900 mb-2">
             Sugerencias de Compra
           </h1>
           <p className="text-gray-600">
@@ -158,7 +158,7 @@ export default function SuggestionsPage() {
               <AlertTriangle className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">
+              <h3 className="text-lg text-gray-900">
                 Productos con Bajo Stock
               </h3>
               <p className="text-sm text-gray-600">Requieren atención urgente</p>
@@ -197,7 +197,7 @@ export default function SuggestionsPage() {
               <TrendingUp className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">
+              <h3 className="text-lg text-gray-900">
                 Productos Más Vendidos
               </h3>
               <p className="text-sm text-gray-600">Últimos 30 días</p>
@@ -241,7 +241,7 @@ export default function SuggestionsPage() {
                 <ShoppingCart className="w-6 h-6 text-primary-600" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">
+                <h3 className="text-lg text-gray-900">
                   Análisis y Recomendaciones de IA
                 </h3>
                 <p className="text-sm text-gray-600">

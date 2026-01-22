@@ -92,8 +92,8 @@ export default function DashboardPage() {
     return new Intl.NumberFormat('es-AR', { // Use 'es-AR' for Argentina
     style: 'currency',
     currency: 'ARS',
-    minimumFractionDigits: 2, // Usually shows cents
-    maximumFractionDigits: 2, // Usually shows cents
+    minimumFractionDigits: 0, // Usually shows cents
+    maximumFractionDigits: 0, // Usually shows cents
     currencyDisplay: 'symbol' // Or 'code' (ARS) or 'name' (Pesos argentinos)
   }).format(value);
   };
@@ -107,7 +107,7 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-normal text-gray-900">Dashboard</h1>
+          <h1 className="text-2xl text-gray-900">Dashboard</h1>
           <p className="text-gray-600 mt-1">
             Vista general de tu negocio
           </p>
@@ -129,7 +129,7 @@ export default function DashboardPage() {
             <Calendar className="w-5 h-5 text-gray-400" />
           </div>
           <h3 className="text-sm font-medium text-gray-600 mb-1">Ventas del Día</h3>
-          <p className="text-3xl font-bold text-gray-900">
+          <p className="text-3xl text-gray-900">
             {formatCurrency(data.sales.today)}
           </p>
           <p className="text-sm text-gray-500 mt-2">
@@ -160,7 +160,7 @@ export default function DashboardPage() {
             )}
           </div>
           <h3 className="text-sm font-medium text-gray-600 mb-1">Ventas del Mes</h3>
-          <p className="text-3xl font-bold text-gray-900">
+          <p className="text-3xl text-gray-900">
             {formatCurrency(data.sales.month)}
           </p>
           <p className="text-sm text-gray-500 mt-2">
@@ -177,7 +177,7 @@ export default function DashboardPage() {
             <ShoppingCart className="w-5 h-5 text-gray-400" />
           </div>
           <h3 className="text-sm font-medium text-gray-600 mb-1">Ticket Promedio</h3>
-          <p className="text-3xl font-bold text-gray-900">
+          <p className="text-3xl text-gray-900">
             {formatCurrency(data.sales.averageTicket)}
           </p>
           <p className="text-sm text-gray-500 mt-2">
@@ -198,7 +198,7 @@ export default function DashboardPage() {
             </div>
           </div>
           <h3 className="text-sm font-medium text-gray-600 mb-1">Valor Inventario</h3>
-          <p className="text-3xl font-bold text-gray-900">
+          <p className="text-3xl text-gray-900">
             {formatCurrency(data.inventory.totalValue)}
           </p>
           <p className="text-sm text-gray-500 mt-2">
@@ -215,7 +215,7 @@ export default function DashboardPage() {
               <AlertTriangle className="w-6 h-6 text-white" />
             </div>
             <div className="flex-1">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              <h3 className="text-lg text-gray-900 mb-2">
                 Alerta de Inventario
               </h3>
               <div className="flex flex-wrap gap-4 text-sm">
@@ -264,7 +264,7 @@ export default function DashboardPage() {
               <CalendarClock className="w-5 h-5 text-red-600" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">
+              <h3 className="text-lg text-gray-900">
                 Próximos a Vencer
               </h3>
               <p className="text-sm text-gray-600">Próximos 30 días</p>
@@ -333,7 +333,7 @@ export default function DashboardPage() {
               <TrendingUp className="w-5 h-5 text-green-600" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">
+              <h3 className="text-lg text-gray-900">
                 Productos Más Vendidos
               </h3>
               <p className="text-sm text-gray-600">Últimos 30 días</p>
@@ -368,7 +368,7 @@ export default function DashboardPage() {
               <AlertTriangle className="w-5 h-5 text-orange-600" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">
+              <h3 className="text-lg text-gray-900">
                 Productos con Bajo Stock
               </h3>
               <p className="text-sm text-gray-600">Requieren atención urgente</p>
@@ -409,7 +409,7 @@ export default function DashboardPage() {
 
       {/* Accesos Rápidos */}
       <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+        <h3 className="text-lg text-gray-900 mb-4">
           Accesos Rápidos
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
