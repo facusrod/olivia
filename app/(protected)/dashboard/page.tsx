@@ -18,6 +18,7 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Clock,
+  CalendarClock,
 } from 'lucide-react';
 
 interface DashboardData {
@@ -36,11 +37,13 @@ interface DashboardData {
     lowStock: number;
     outOfStock: number;
     totalValue: number;
+    expiringSoon: number;
   };
   products: {
     topSelling: Array<{ id: number; name: string; totalQty: number }>;
     lowStock: Array<{ id: number; name: string; qty_available: number; list_price: number }>;
     slowMoving: Array<{ id: number; name: string; qty_available: number }>;
+    expiring: Array<{ id: number; name: string; totalQty: number; expirationDate: string; lotName: string; daysUntilExpiration: number }>;
   };
   updatedAt: string;
 }
@@ -86,10 +89,13 @@ export default function DashboardPage() {
   }
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('es-ES', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(value);
+    return new Intl.NumberFormat('es-AR', { // Use 'es-AR' for Argentina
+    style: 'currency',
+    currency: 'ARS',
+    minimumFractionDigits: 2, // Usually shows cents
+    maximumFractionDigits: 2, // Usually shows cents
+    currencyDisplay: 'symbol' // Or 'code' (ARS) or 'name' (Pesos argentinos)
+  }).format(value);
   };
 
   const formatNumber = (value: number) => {
@@ -101,7 +107,7 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+          <h1 className="text-2xl font-normal text-gray-900">Dashboard</h1>
           <p className="text-gray-600 mt-1">
             Vista general de tu negocio
           </p>
@@ -202,7 +208,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Alertas de Inventario */}
-      {(data.inventory.lowStock > 0 || data.inventory.outOfStock > 0) && (
+      {(data.inventory.lowStock > 0 || data.inventory.outOfStock > 0 || data.inventory.expiringSoon > 0) && (
         <div className="bg-gradient-to-r from-orange-50 to-red-50 border border-orange-200 rounded-xl p-6">
           <div className="flex items-start gap-4">
             <div className="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -213,6 +219,14 @@ export default function DashboardPage() {
                 Alerta de Inventario
               </h3>
               <div className="flex flex-wrap gap-4 text-sm">
+                {data.inventory.expiringSoon > 0 && (
+                  <div className="flex items-center gap-2">
+                    <CalendarClock className="w-4 h-4 text-red-600" />
+                    <span className="text-gray-700">
+                      <strong>{data.inventory.expiringSoon}</strong> productos próximos a vencer
+                    </span>
+                  </div>
+                )}
                 {data.inventory.lowStock > 0 && (
                   <div className="flex items-center gap-2">
                     <TrendingDown className="w-4 h-4 text-orange-600" />
@@ -241,8 +255,77 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Grid de 2 columnas para productos */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Grid de 3 columnas para productos */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Productos Próximos a Vencer */}
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+              <CalendarClock className="w-5 h-5 text-red-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">
+                Próximos a Vencer
+              </h3>
+              <p className="text-sm text-gray-600">Próximos 30 días</p>
+            </div>
+          </div>
+          <div className="space-y-3">
+            {data.products.expiring.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <CalendarClock className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                <p>No hay productos próximos a vencer</p>
+              </div>
+            ) : (
+              data.products.expiring.map((product) => {
+                const isUrgent = product.daysUntilExpiration <= 7;
+                const isWarning = product.daysUntilExpiration > 7 && product.daysUntilExpiration <= 15;
+
+                return (
+                  <div
+                    key={`${product.id}-${product.lotName}`}
+                    className={`flex items-center justify-between p-3 rounded-lg border ${
+                      isUrgent
+                        ? 'bg-red-50 border-red-200'
+                        : isWarning
+                        ? 'bg-orange-50 border-orange-200'
+                        : 'bg-yellow-50 border-yellow-200'
+                    }`}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-gray-900 truncate">
+                        {product.name}
+                      </p>
+                      <p className="text-xs text-gray-600">
+                        Lote: {product.lotName}
+                      </p>
+                      <p className="text-xs text-gray-600 mt-1">
+                        {new Date(product.expirationDate).toLocaleDateString('es-ES')}
+                      </p>
+                    </div>
+                    <div className="text-right ml-3">
+                      <p className={`text-lg font-bold ${
+                        isUrgent
+                          ? 'text-red-600'
+                          : isWarning
+                          ? 'text-orange-600'
+                          : 'text-yellow-600'
+                      }`}>
+                        {product.daysUntilExpiration}
+                      </p>
+                      <p className="text-xs text-gray-600">
+                        {product.daysUntilExpiration === 1 ? 'día' : 'días'}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {product.totalQty} u.
+                      </p>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
         {/* Productos Más Vendidos */}
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <div className="flex items-center gap-3 mb-6">

@@ -23,6 +23,7 @@ export async function GET(req: NextRequest) {
     const [
       lowStockProducts,
       topSellingProducts,
+      expiringProducts,
       allProducts,
       todayOrders,
       monthOrders,
@@ -33,6 +34,9 @@ export async function GET(req: NextRequest) {
 
       // Top 5 productos más vendidos (últimos 30 días)
       odoo.getTopSellingProducts(30, 5),
+
+      // Productos próximos a vencer (próximos 30 días, top 10)
+      odoo.getExpiringProducts(30, 10),
 
       // Todos los productos para calcular inventario
       odoo.getProducts([]),
@@ -102,11 +106,13 @@ export async function GET(req: NextRequest) {
         lowStock: lowStockProducts.length,
         outOfStock: outOfStockCount,
         totalValue: totalInventoryValue,
+        expiringSoon: expiringProducts.length,
       },
       products: {
         topSelling: topSellingProducts,
         lowStock: lowStockProducts.slice(0, 5),
         slowMoving: slowMovingProducts,
+        expiring: expiringProducts,
       },
       updatedAt: new Date().toISOString(),
     });

@@ -18,6 +18,16 @@ interface OdooProduct {
   description_sale?: string;
 }
 
+interface OdooProductLot {
+  id: number;
+  name: string;
+  product_id: [number, string];
+  product_qty: number;
+  expiration_date?: string;
+  use_date?: string;
+  removal_date?: string;
+}
+
 interface OdooSaleOrder {
   id: number;
   name: string;
@@ -261,6 +271,95 @@ class OdooClient {
     return this.getProducts([['qty_available', '<=', threshold]]);
   }
 
+  async getExpiringProducts(daysThreshold: number = 30, limit: number = 10): Promise<any[]> {
+    try {
+      // Calcular la fecha límite (hoy + daysThreshold)
+      const now = new Date();
+      const thresholdDate = new Date();
+      thresholdDate.setDate(now.getDate() + daysThreshold);
+
+      const nowStr = now.toISOString().split('T')[0];
+      const thresholdStr = thresholdDate.toISOString().split('T')[0];
+
+      // Buscar lotes con fecha de vencimiento próxima
+      const lots: OdooProductLot[] = await this.executeKw('stock.lot', 'search_read', [
+        [
+          '|', '|',
+          ['expiration_date', '!=', false],
+          ['use_date', '!=', false],
+          ['removal_date', '!=', false],
+          '|', '|',
+          '&', ['expiration_date', '>=', nowStr], ['expiration_date', '<=', thresholdStr],
+          '&', ['use_date', '>=', nowStr], ['use_date', '<=', thresholdStr],
+          '&', ['removal_date', '>=', nowStr], ['removal_date', '<=', thresholdStr],
+          ['product_qty', '>', 0]
+        ],
+      ], {
+        fields: ['id', 'name', 'product_id', 'product_qty', 'expiration_date', 'use_date', 'removal_date'],
+        limit: limit * 3, // Obtener más para agrupar por producto
+        order: 'expiration_date asc, use_date asc, removal_date asc',
+      });
+
+      if (!lots || lots.length === 0) {
+        return [];
+      }
+
+      // Agrupar por producto y sumar cantidades
+      const productMap: { [key: number]: any } = {};
+
+      for (const lot of lots) {
+        const productId = lot.product_id[0];
+        const productName = lot.product_id[1];
+
+        // Determinar la fecha de vencimiento más próxima
+        const expirationDate = lot.expiration_date || lot.use_date || lot.removal_date;
+
+        if (!expirationDate) continue;
+
+        if (!productMap[productId]) {
+          productMap[productId] = {
+            id: productId,
+            name: productName,
+            totalQty: 0,
+            expirationDate: expirationDate,
+            lotName: lot.name,
+            daysUntilExpiration: 0
+          };
+        } else {
+          // Si encontramos una fecha más cercana, actualizamos
+          if (expirationDate < productMap[productId].expirationDate) {
+            productMap[productId].expirationDate = expirationDate;
+            productMap[productId].lotName = lot.name;
+          }
+        }
+
+        productMap[productId].totalQty += lot.product_qty;
+      }
+
+      // Calcular días hasta vencimiento y ordenar
+      const products = Object.values(productMap).map(product => {
+        const expDate = new Date(product.expirationDate);
+        const diffTime = expDate.getTime() - now.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        return {
+          ...product,
+          daysUntilExpiration: diffDays
+        };
+      });
+
+      // Ordenar por días hasta vencimiento (más urgentes primero)
+      return products
+        .sort((a, b) => a.daysUntilExpiration - b.daysUntilExpiration)
+        .slice(0, limit);
+
+    } catch (error: any) {
+      console.error('Error getting expiring products:', error?.message || error);
+      // Si el módulo de lotes no está disponible, retornar array vacío
+      return [];
+    }
+  }
+
   async getTopSellingProducts(days: number = 30, limit: number = 10): Promise<any[]> {
     try {
       // Obtener fecha de inicio
@@ -342,4 +441,4 @@ export function getOdooClient(): OdooClient {
   return odooClient;
 }
 
-export type { OdooProduct, OdooSaleOrder, OdooPurchaseOrder };
+export type { OdooProduct, OdooSaleOrder, OdooPurchaseOrder, OdooProductLot };
