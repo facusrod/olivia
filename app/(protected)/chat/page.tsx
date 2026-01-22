@@ -137,14 +137,6 @@ export default function ChatPage() {
 
       {/* Main Chat Area */}
       <div className="flex flex-col flex-1">
-        {/* Header */}
-        <div className="bg-white px-6 py-4 border-b border-gray-200">
-          <h1 className="text-2xl font-bold text-gray-900">Chat con OlivIA</h1>
-          <p className="text-sm text-gray-600 mt-1">
-            Pregunta sobre productos, stock, ventas y más
-          </p>
-        </div>
-
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
           {loadingConversation ? (

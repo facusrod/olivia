@@ -80,19 +80,8 @@ export default function ChatSidebar({
 
   return (
     <div className="w-80 bg-white border-r border-gray-200 flex flex-col h-full">
-      {/* Header */}
-      <div className="p-4 border-b border-gray-200">
-        <button
-          onClick={onNewChat}
-          className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-semibold"
-        >
-          <Plus className="w-5 h-5" />
-          New Chat
-        </button>
-      </div>
-
       {/* Search */}
-      <div className="p-4 border-b border-gray-200">
+      <div className="p-4">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
@@ -100,7 +89,7 @@ export default function ChatSidebar({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search"
-            className="w-full pl-10 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="w-full pl-10 pr-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
           />
         </div>
       </div>
@@ -111,15 +100,34 @@ export default function ChatSidebar({
           <div className="flex items-center justify-center py-8">
             <Loader2 className="w-6 h-6 animate-spin text-primary-600" />
           </div>
-        ) : filteredConversations.length === 0 ? (
-          <div className="p-6 text-center">
-            <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-sm text-gray-500">
-              {searchQuery ? 'No se encontraron conversaciones' : 'No hay conversaciones aún'}
-            </p>
-          </div>
         ) : (
           <div className="p-2 space-y-1">
+            {/* New Chat Button - Styled as list item */}
+            <button
+              onClick={onNewChat}
+              className="w-full group relative p-3 rounded-lg cursor-pointer transition-colors hover:bg-gray-50 text-left"
+            >
+              <div className="flex items-start gap-2">
+                <MessageSquare className="w-4 h-4 mt-0.5 flex-shrink-0 text-gray-400" />
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-sm font-medium text-gray-900 truncate">
+                    New Chat
+                  </h4>
+                  <p className="text-xs text-gray-500 truncate">
+                    Iniciar una nueva conversación
+                  </p>
+                </div>
+              </div>
+            </button>
+
+            {/* Show empty state only if no conversations AND no search */}
+            {filteredConversations.length === 0 && searchQuery && (
+              <div className="p-6 text-center">
+                <p className="text-sm text-gray-500">
+                  No se encontraron conversaciones
+                </p>
+              </div>
+            )}
             {filteredConversations.map((conversation) => (
               <div
                 key={conversation.id}
