@@ -49,6 +49,7 @@ interface OdooPurchaseOrder {
 class OdooClient {
   private config: OdooConfig;
   private uid: number | null = null;
+  private clients: Map<string, xmlrpc.Client> = new Map();
 
   constructor() {
     this.config = {
@@ -60,12 +61,17 @@ class OdooClient {
   }
 
   private getClient(path: string): xmlrpc.Client {
+    if (this.clients.has(path)) {
+      return this.clients.get(path)!;
+    }
     const url = new URL(this.config.url);
-    return xmlrpc.createClient({
+    const client = xmlrpc.createClient({
       host: url.hostname,
       port: parseInt(url.port) || 8069,
       path: `/xmlrpc/2/${path}`,
     });
+    this.clients.set(path, client);
+    return client;
   }
 
   async authenticate(): Promise<number> {

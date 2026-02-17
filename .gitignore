@@ -41,5 +41,9 @@ next-env.d.ts
 /exports
 *.tar
 
+# odoo local data
+/odoo-addons/*
+!/odoo-addons/.gitkeep
+
 # logs
 /tasks

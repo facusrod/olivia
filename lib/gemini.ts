@@ -25,15 +25,13 @@ class GeminiService {
 
   private buildSystemPrompt(context?: ChatContext): string {
     let prompt = `Eres OlivIA, un asistente virtual inteligente para una tienda boutique de productos saludables.
-
-Tu misión es ayudar a los empleados de la tienda a:
-1. Responder consultas de clientes sobre productos (dietas Keto, veganas, sin gluten, etc.)
-2. Buscar productos específicos en el inventario
-3. Analizar ventas y sugerir órdenes de compra
-4. Proporcionar información sobre stock disponible
-
-IMPORTANTE: Solo proporciona información basada en los datos del inventario proporcionados a continuación. No inventes productos, precios o información que no esté en los datos. Si no tienes datos específicos, indica claramente que no tienes acceso al inventario y sugiere verificar directamente en el sistema.
-`;
+      Tu misión es ayudar a los empleados de la tienda a:
+      1. Responder consultas de clientes sobre productos (dietas Keto, veganas, sin gluten, etc.)
+      2. Buscar productos específicos en el inventario
+      3. Analizar ventas y sugerir órdenes de compra
+      4. Proporcionar información sobre stock disponible
+      IMPORTANTE: Solo proporciona información basada en los datos del inventario proporcionados a continuación. No inventes productos, precios o información que no esté en los datos. Si no tienes datos específicos, indica claramente que no tienes acceso al inventario y sugiere verificar directamente en el sistema.
+      `;
     console.log('Building system prompt with context:', JSON.stringify(context?.products));
     if (context?.products && context.products.length > 0) {
       prompt += `\n\n=== PRODUCTOS DISPONIBLES ===\n`;
@@ -117,20 +115,18 @@ IMPORTANTE: Solo proporciona información basada en los datos del inventario pro
   ): Promise<string> {
     try {
       const prompt = `Analiza la siguiente información de la tienda y sugiere órdenes de compra:
+        === PRODUCTOS CON BAJO STOCK ===
+        ${lowStock.map((p) => `- ${p.name}: ${p.qty_available} unidades, Precio: $${p.list_price}`).join('\n')}
 
-=== PRODUCTOS CON BAJO STOCK ===
-${lowStock.map((p) => `- ${p.name}: ${p.qty_available} unidades, Precio: $${p.list_price}`).join('\n')}
+        === PRODUCTOS MÁS VENDIDOS (últimos 30 días) ===
+        ${topSelling.map((s) => `- ${s.name}: ${s.totalQty} unidades vendidas`).join('\n')}
 
-=== PRODUCTOS MÁS VENDIDOS (últimos 30 días) ===
-${topSelling.map((s) => `- ${s.name}: ${s.totalQty} unidades vendidas`).join('\n')}
-
-Por favor, proporciona:
-1. Lista de productos que deberían reponerse urgentemente
-2. Cantidad sugerida para cada producto (basada en ventas y stock actual)
-3. Prioridad (Alta/Media/Baja)
-4. Justificación breve para cada sugerencia
-
-Formato de respuesta en lista clara y concisa.`;
+        Por favor, proporciona:
+        1. Lista de productos que deberían reponerse urgentemente
+        2. Cantidad sugerida para cada producto (basada en ventas y stock actual)
+        3. Prioridad (Alta/Media/Baja)
+        4. Justificación breve para cada sugerencia
+        Formato de respuesta en lista clara y concisa.`;
 
       const result = await this.model.generateContent(prompt);
       const response = await result.response;
@@ -148,20 +144,19 @@ Formato de respuesta en lista clara y concisa.`;
   }> {
     try {
       const prompt = `Analiza la siguiente consulta de un cliente y extrae información para buscar productos:
+        Consulta: "${query}"
 
-Consulta: "${query}"
+        Extrae:
+        1. Términos de búsqueda principales (palabras clave)
+        2. Categoría o tipo de producto (si se menciona: "keto", "vegano", "sin gluten", "orgánico", etc.)
+        3. Filtros especiales (precio, marca, etc.)
 
-Extrae:
-1. Términos de búsqueda principales (palabras clave)
-2. Categoría o tipo de producto (si se menciona: "keto", "vegano", "sin gluten", "orgánico", etc.)
-3. Filtros especiales (precio, marca, etc.)
-
-Responde SOLO en formato JSON con esta estructura:
-{
-  "searchTerms": ["término1", "término2"],
-  "category": "categoría si aplica",
-  "filters": ["filtro1 si aplica"]
-}`;
+        Responde SOLO en formato JSON con esta estructura:
+        {
+          "searchTerms": ["término1", "término2"],
+          "category": "categoría si aplica",
+          "filters": ["filtro1 si aplica"]
+        }`;
 
       const result = await this.model.generateContent(prompt);
       const response = await result.response;
