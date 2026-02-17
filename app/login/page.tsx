@@ -1,13 +1,15 @@
 'use client';
 
 import { signIn, useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useState, Suspense } from 'react';
 import { Sprout } from 'lucide-react';
 
-export default function LoginPage() {
+function LoginContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const error = searchParams.get('error');
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -48,6 +50,17 @@ export default function LoginPage() {
           </p>
         </div>
 
+        {error === 'AccessDenied' && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-red-700 text-sm font-medium text-center">
+              Tu cuenta no tiene acceso autorizado.
+            </p>
+            <p className="text-red-600 text-xs text-center mt-1">
+              Contacta al administrador para solicitar acceso.
+            </p>
+          </div>
+        )}
+
         <button
           onClick={() => signIn('google', { callbackUrl: '/chat' })}
           className="w-full flex items-center justify-center gap-3 bg-white border-2 border-gray-300 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 shadow-sm"
@@ -79,5 +92,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginContent />
+    </Suspense>
   );
 }

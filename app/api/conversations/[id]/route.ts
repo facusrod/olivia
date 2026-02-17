@@ -18,7 +18,7 @@ export async function GET(
 
     const conversation = await Conversation.findOne({
       _id: params.id,
-      userId: session.user.id,
+      userId: session.user.dbId,
       isActive: true,
     }).lean();
 

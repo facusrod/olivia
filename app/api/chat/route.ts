@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import connectDB from '@/lib/mongodb';
 import Conversation from '@/models/Conversation';
+import User from '@/models/User';
 import { getGeminiService } from '@/lib/gemini';
 import { getOdooClient } from '@/lib/odoo';
 
@@ -29,7 +30,7 @@ export async function POST(req: NextRequest) {
     // Obtener o crear conversación
     if (conversationId) {
       conversation = await Conversation.findById(conversationId);
-      if (!conversation || conversation.userId !== session.user.id) {
+      if (!conversation || conversation.userId !== session.user.dbId) {
         return NextResponse.json({ error: 'Conversation not found' }, { status: 404 });
       }
       // Convertir historial para Gemini
@@ -40,7 +41,7 @@ export async function POST(req: NextRequest) {
     } else {
       // Crear nueva conversación
       conversation = new Conversation({
-        userId: session.user.id,
+        userId: session.user.dbId,
         title: message.substring(0, 50) + (message.length > 50 ? '...' : ''),
         messages: [],
       });
@@ -93,6 +94,15 @@ export async function POST(req: NextRequest) {
     });
 
     await conversation.save();
+
+    // Tracking de uso
+    User.updateOne(
+      { _id: session.user.dbId },
+      {
+        $inc: { 'usage.totalMessages': 1 },
+        $set: { 'usage.lastActiveAt': new Date() },
+      }
+    ).catch((err: any) => console.error('Error updating usage:', err));
 
     return NextResponse.json({
       response,

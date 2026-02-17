@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
     await connectDB();
 
     const conversations = await Conversation.find({
-      userId: session.user.id,
+      userId: session.user.dbId,
       isActive: true,
     })
       .sort({ updatedAt: -1 })
@@ -63,7 +63,7 @@ export async function DELETE(req: NextRequest) {
 
     const conversation = await Conversation.findOne({
       _id: conversationId,
-      userId: session.user.id,
+      userId: session.user.dbId,
     });
 
     if (!conversation) {
