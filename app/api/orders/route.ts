@@ -11,22 +11,23 @@ export async function GET(req: NextRequest) {
     }
 
     const { searchParams } = new URL(req.url);
-    const stateFilter = searchParams.get('state') || 'sale';
+    const stateFilter = searchParams.get('state') || 'sent';
     const limit = parseInt(searchParams.get('limit') || '20');
     const offset = parseInt(searchParams.get('offset') || '0');
 
     const odoo = getOdooClient();
 
+    // Mapeo de filtros de estado
     const states = stateFilter === 'all'
-      ? ['sale', 'done']
+      ? ['sent', 'sale', 'done']
       : stateFilter.split(',');
 
     const filters: any[] = [['state', 'in', states]];
 
-    // Solo 2 llamadas: pedidos de la vista actual + todos los pendientes para métricas
+    // Solo 2 llamadas: pedidos de la vista actual + todos los pendientes (sent+sale) para métricas
     const [orders, allPending] = await Promise.all([
       odoo.getEcommerceOrders(filters, limit, offset),
-      odoo.getEcommerceOrders([['state', '=', 'sale']], 500),
+      odoo.getEcommerceOrders([['state', 'in', ['sent', 'sale']]], 500),
     ]);
 
     // Calcular métricas desde allPending (sin llamadas extra)
@@ -43,13 +44,12 @@ export async function GET(req: NextRequest) {
       (o) => new Date(o.date_order) >= startOfDay
     ).length;
 
-    // Total para paginación: si estamos viendo "sale", usamos allPending.length
-    // Si otro filtro, estimamos con lo que tenemos
+    // Total para paginación
     let total: number;
-    if (stateFilter === 'sale') {
-      total = pendingCount;
+    if (stateFilter === 'sent' || stateFilter === 'sale') {
+      // Para sent o sale, filtramos en JS desde allPending
+      total = allPending.filter((o) => states.includes(o.state)).length;
     } else {
-      // Para "done" o "all", si la página está llena hay más
       total = orders.length < limit ? offset + orders.length : offset + limit + 1;
     }
 

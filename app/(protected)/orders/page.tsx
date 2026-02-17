@@ -32,9 +32,9 @@ interface Summary {
 const getStateBadge = (state: string) => {
   const map: Record<string, { label: string; color: string }> = {
     draft: { label: 'Borrador', color: 'text-gray-600 bg-gray-100' },
-    sent: { label: 'Enviado', color: 'text-blue-600 bg-blue-50' },
-    sale: { label: 'Confirmado', color: 'text-yellow-700 bg-yellow-50' },
-    done: { label: 'Completado', color: 'text-green-600 bg-green-50' },
+    sent: { label: 'Sin Pagar', color: 'text-orange-700 bg-orange-50' },
+    sale: { label: 'Pagado', color: 'text-green-700 bg-green-50' },
+    done: { label: 'Completado', color: 'text-blue-600 bg-blue-50' },
     cancel: { label: 'Cancelado', color: 'text-red-600 bg-red-50' },
   };
   return map[state] || { label: state, color: 'text-gray-600 bg-gray-100' };
@@ -48,7 +48,7 @@ const formatCurrency = (value: number) =>
     maximumFractionDigits: 0,
   }).format(value);
 
-type TabFilter = 'sale' | 'done' | 'all';
+type TabFilter = 'sent' | 'sale' | 'done' | 'all';
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<EcommerceOrder[]>([]);
@@ -57,13 +57,13 @@ export default function OrdersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalOrders, setTotalOrders] = useState(0);
   const [hasMore, setHasMore] = useState(false);
-  const [activeTab, setActiveTab] = useState<TabFilter>('sale');
+  const [activeTab, setActiveTab] = useState<TabFilter>('sent');
   const router = useRouter();
 
   const ordersPerPage = 20;
 
   useEffect(() => {
-    loadOrders('sale', 1);
+    loadOrders('sent', 1);
   }, []);
 
   const loadOrders = async (state: TabFilter, page: number) => {
@@ -100,7 +100,8 @@ export default function OrdersPage() {
   const totalPages = Math.ceil(totalOrders / ordersPerPage);
 
   const tabs: { key: TabFilter; label: string }[] = [
-    { key: 'sale', label: 'Pendientes' },
+    { key: 'sent', label: 'Sin Pagar' },
+    { key: 'sale', label: 'Confirmados' },
     { key: 'done', label: 'Completados' },
     { key: 'all', label: 'Todos' },
   ];
@@ -137,7 +138,7 @@ export default function OrdersPage() {
             </div>
             <h3 className="text-sm font-medium text-gray-600 mb-1">Pedidos Pendientes</h3>
             <p className="text-3xl text-gray-900">{summary.pendingCount}</p>
-            <p className="text-sm text-gray-500 mt-2">Esperando preparación</p>
+            <p className="text-sm text-gray-500 mt-2">Sin pagar + por preparar</p>
           </div>
 
           <div className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg transition-shadow">
@@ -150,7 +151,7 @@ export default function OrdersPage() {
             <p className="text-3xl text-gray-900">
               {formatCurrency(summary.totalPendingAmount)}
             </p>
-            <p className="text-sm text-gray-500 mt-2">En pedidos confirmados</p>
+            <p className="text-sm text-gray-500 mt-2">Sin pagar + confirmados</p>
           </div>
 
           <div className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg transition-shadow">
@@ -216,7 +217,7 @@ export default function OrdersPage() {
                   <tr>
                     <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
                       <ShoppingCart className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                      <p>No hay pedidos {activeTab === 'sale' ? 'pendientes' : activeTab === 'done' ? 'completados' : ''}</p>
+                      <p>No hay pedidos {activeTab === 'sent' ? 'sin pagar' : activeTab === 'sale' ? 'confirmados' : activeTab === 'done' ? 'completados' : ''}</p>
                     </td>
                   </tr>
                 ) : (
