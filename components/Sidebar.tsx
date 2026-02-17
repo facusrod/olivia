@@ -7,10 +7,10 @@ import { useEffect, useState } from 'react';
 import {
   LayoutDashboard,
   MessageSquare,
-  Package,
   ShoppingCart,
   Sprout,
   LogOut,
+  ClipboardList,
 } from 'lucide-react';
 
 export default function Sidebar() {
@@ -33,9 +33,9 @@ export default function Sidebar() {
       icon: MessageSquare,
     },
     {
-      href: '/products',
-      label: 'Productos',
-      icon: Package,
+      href: '/orders',
+      label: 'Pedidos Web',
+      icon: ClipboardList,
     },
     {
       href: '/suggestions',
@@ -82,7 +82,7 @@ export default function Sidebar() {
         <ul className="space-y-2">
           {links.map((link) => {
             const Icon = link.icon;
-            const isActive = pathname === link.href;
+            const isActive = pathname === link.href || pathname.startsWith(link.href + '/');
 
             return (
               <li key={link.href}>

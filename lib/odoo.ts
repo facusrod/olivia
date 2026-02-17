@@ -51,6 +51,29 @@ interface OdooPurchaseOrder {
   state: string;
 }
 
+interface OdooEcommerceOrder {
+  id: number;
+  name: string;
+  partner_id: [number, string];
+  partner_shipping_id: [number, string] | false;
+  date_order: string;
+  commitment_date: string | false;
+  amount_total: number;
+  state: string;
+  website_id: [number, string] | false;
+  note: string | false;
+  order_line: number[];
+}
+
+interface OdooEcommerceOrderLine {
+  id: number;
+  product_id: [number, string];
+  name: string;
+  product_uom_qty: number;
+  price_unit: number;
+  price_subtotal: number;
+}
+
 class OdooClient {
   private config: OdooConfig;
   private uid: number | null = null;
@@ -452,6 +475,75 @@ class OdooClient {
     }
   }
 
+  // ========== PEDIDOS WEB / ECOMMERCE ==========
+
+  /**
+   * Obtiene pedidos del ecommerce (sale.order con website_id != false).
+   * Requiere módulo website_sale instalado en Odoo.
+   */
+  async getEcommerceOrders(
+    extraFilters: any[] = [],
+    limit: number = 100,
+    offset: number = 0
+  ): Promise<OdooEcommerceOrder[]> {
+    const baseFilters = [
+      ['website_id', '!=', false],
+      ...extraFilters,
+    ];
+    return this.executeKw('sale.order', 'search_read', [baseFilters], {
+      fields: [
+        'id', 'name', 'partner_id', 'partner_shipping_id',
+        'date_order', 'commitment_date', 'amount_total',
+        'state', 'website_id', 'note', 'order_line',
+      ],
+      limit,
+      offset,
+      order: 'date_order desc',
+    });
+  }
+
+  /**
+   * Cuenta pedidos ecommerce (para paginación eficiente).
+   */
+  async countEcommerceOrders(extraFilters: any[] = []): Promise<number> {
+    const baseFilters = [
+      ['website_id', '!=', false],
+      ...extraFilters,
+    ];
+    return this.executeKw('sale.order', 'search_count', [baseFilters]);
+  }
+
+  /**
+   * Obtiene un pedido ecommerce por ID.
+   */
+  async getEcommerceOrderById(id: number): Promise<OdooEcommerceOrder | null> {
+    const orders = await this.executeKw('sale.order', 'search_read', [
+      [['id', '=', id]],
+    ], {
+      fields: [
+        'id', 'name', 'partner_id', 'partner_shipping_id',
+        'date_order', 'commitment_date', 'amount_total',
+        'state', 'website_id', 'note', 'order_line',
+      ],
+      limit: 1,
+    });
+    return orders.length > 0 ? orders[0] : null;
+  }
+
+  /**
+   * Obtiene las líneas de un pedido con detalle de producto.
+   */
+  async getEcommerceOrderLines(orderId: number): Promise<OdooEcommerceOrderLine[]> {
+    return this.executeKw('sale.order.line', 'search_read', [
+      [['order_id', '=', orderId]],
+    ], {
+      fields: [
+        'id', 'product_id', 'name', 'product_uom_qty',
+        'price_unit', 'price_subtotal',
+      ],
+    });
+  }
+
   // ========== PROVEEDORES ==========
   async getSuppliers(limit: number = 100): Promise<any[]> {
     return this.executeKw('res.partner', 'search_read', [
@@ -473,4 +565,4 @@ export function getOdooClient(): OdooClient {
   return odooClient;
 }
 
-export type { OdooProduct, OdooSaleOrder, OdooPurchaseOrder, OdooProductLot };
+export type { OdooProduct, OdooSaleOrder, OdooPurchaseOrder, OdooProductLot, OdooEcommerceOrder, OdooEcommerceOrderLine };

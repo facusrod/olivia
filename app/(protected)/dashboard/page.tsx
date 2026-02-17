@@ -20,6 +20,7 @@ import {
   Clock,
   CalendarClock,
   RefreshCw,
+  ClipboardList,
 } from 'lucide-react';
 
 interface DashboardData {
@@ -475,13 +476,13 @@ export default function DashboardPage() {
           </button>
 
           <button
-            onClick={() => router.push('/products')}
+            onClick={() => router.push('/orders')}
             className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors text-left"
           >
-            <Package className="w-6 h-6 text-blue-600" />
+            <ClipboardList className="w-6 h-6 text-blue-600" />
             <div>
-              <p className="font-semibold text-gray-900">Ver Productos</p>
-              <p className="text-sm text-gray-600">Gestiona tu inventario</p>
+              <p className="font-semibold text-gray-900">Pedidos Web</p>
+              <p className="text-sm text-gray-600">Pedidos ecommerce por preparar</p>
             </div>
           </button>
         </div>
