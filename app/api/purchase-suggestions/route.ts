@@ -7,22 +7,20 @@ import connectDB from '@/lib/mongodb';
 import PurchaseSuggestion from '@/models/PurchaseSuggestion';
 
 /**
- * GET - Obtener las últimas sugerencias guardadas (sin generar nuevas)
+ * GET - Obtener las últimas sugerencias guardadas (compartidas, no por usuario)
  */
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
+    if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     await connectDB();
 
-    // Buscar la última sugerencia del usuario
-    const lastSuggestion = await PurchaseSuggestion.findOne({
-      userId: session.user.email,
-    })
-      .sort({ createdAt: -1 })
+    // Buscar la última sugerencia (compartida entre todos los usuarios)
+    const lastSuggestion = await PurchaseSuggestion.findOne()
+      .sort({ generatedAt: -1 })
       .lean();
 
     if (!lastSuggestion) {
@@ -32,6 +30,7 @@ export async function GET(req: NextRequest) {
           topSelling: [],
           analysis: '',
           generatedAt: null,
+          generatedBy: null,
           message: 'No hay sugerencias generadas. Presiona "Generar" para crear un análisis.',
         },
         { status: 200 }
@@ -43,6 +42,7 @@ export async function GET(req: NextRequest) {
       topSelling: lastSuggestion.topSelling,
       analysis: lastSuggestion.analysis,
       generatedAt: lastSuggestion.generatedAt.toISOString(),
+      generatedBy: lastSuggestion.generatedBy || null,
     });
   } catch (error: any) {
     console.error('Purchase suggestions GET error:', error);
@@ -54,12 +54,12 @@ export async function GET(req: NextRequest) {
 }
 
 /**
- * POST - Generar nuevas sugerencias y guardarlas
+ * POST - Generar nuevas sugerencias y guardarlas (compartidas)
  */
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
+    if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -79,13 +79,13 @@ export async function POST(req: NextRequest) {
 
     const generatedAt = new Date();
 
-    // Guardar en la base de datos
+    // Guardar como sugerencia compartida (no por usuario)
     const suggestion = await PurchaseSuggestion.create({
       lowStock,
       topSelling,
       analysis,
       generatedAt,
-      userId: session.user.email,
+      generatedBy: session.user.email || '',
     });
 
     return NextResponse.json({
@@ -93,6 +93,7 @@ export async function POST(req: NextRequest) {
       topSelling: suggestion.topSelling,
       analysis: suggestion.analysis,
       generatedAt: suggestion.generatedAt.toISOString(),
+      generatedBy: suggestion.generatedBy,
     });
   } catch (error: any) {
     console.error('Purchase suggestions POST error:', error);

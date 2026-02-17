@@ -19,6 +19,7 @@ import {
   ArrowDownRight,
   Clock,
   CalendarClock,
+  RefreshCw,
 } from 'lucide-react';
 
 interface DashboardData {
@@ -38,6 +39,7 @@ interface DashboardData {
     outOfStock: number;
     totalValue: number;
     expiringSoon: number;
+    totalProducts: number;
   };
   products: {
     topSelling: Array<{ id: number; name: string; totalQty: number }>;
@@ -51,12 +53,14 @@ interface DashboardData {
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
     loadDashboard();
   }, []);
 
+  // GET - Carga el último snapshot guardado
   const loadDashboard = async () => {
     try {
       setLoading(true);
@@ -69,6 +73,22 @@ export default function DashboardPage() {
       console.error('Error:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // POST - Regenera todo el dashboard desde Odoo
+  const refreshDashboard = async () => {
+    try {
+      setRefreshing(true);
+      const response = await fetch('/api/dashboard', { method: 'POST' });
+      if (!response.ok) throw new Error('Error al actualizar dashboard');
+
+      const result = await response.json();
+      setData(result);
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -89,12 +109,12 @@ export default function DashboardPage() {
   }
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('es-AR', { // Use 'es-AR' for Argentina
+    return new Intl.NumberFormat('es-AR', {
     style: 'currency',
     currency: 'ARS',
-    minimumFractionDigits: 0, // Usually shows cents
-    maximumFractionDigits: 0, // Usually shows cents
-    currencyDisplay: 'symbol' // Or 'code' (ARS) or 'name' (Pesos argentinos)
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+    currencyDisplay: 'symbol'
   }).format(value);
   };
 
@@ -112,9 +132,28 @@ export default function DashboardPage() {
             Vista general de tu negocio
           </p>
         </div>
-        <div className="flex items-center gap-2 text-sm text-gray-500">
-          <Clock className="w-4 h-4" />
-          Actualizado: {new Date(data.updatedAt).toLocaleString('es-ES')}
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <Clock className="w-4 h-4" />
+            Actualizado: {new Date(data.updatedAt).toLocaleString('es-ES')}
+          </div>
+          <button
+            onClick={refreshDashboard}
+            disabled={refreshing}
+            className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 transition-colors text-sm font-semibold"
+          >
+            {refreshing ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Actualizando...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="w-4 h-4" />
+                Actualizar
+              </>
+            )}
+          </button>
         </div>
       </div>
 
@@ -202,7 +241,7 @@ export default function DashboardPage() {
             {formatCurrency(data.inventory.totalValue)}
           </p>
           <p className="text-sm text-gray-500 mt-2">
-            {data.inventory.lowStock} productos bajo stock
+            {formatNumber(data.inventory.totalProducts || 0)} productos · {data.inventory.lowStock} bajo stock
           </p>
         </div>
       </div>

@@ -206,6 +206,30 @@ class OdooClient {
     return products.length > 0 ? products[0] : null;
   }
 
+  /**
+   * Obtiene TODOS los productos paginando automáticamente.
+   * Odoo limita las respuestas, así que hacemos múltiples llamadas.
+   */
+  async getAllProducts(filters: any[] = []): Promise<OdooProduct[]> {
+    const PAGE_SIZE = 200;
+    let offset = 0;
+    let allProducts: OdooProduct[] = [];
+
+    while (true) {
+      const batch = await this.getProducts(filters, PAGE_SIZE, offset);
+      allProducts = allProducts.concat(batch);
+
+      if (batch.length < PAGE_SIZE) {
+        // Ya no hay más páginas
+        break;
+      }
+      offset += PAGE_SIZE;
+    }
+
+    console.log(`📦 getAllProducts: ${allProducts.length} productos obtenidos (${Math.ceil(offset / PAGE_SIZE) + 1} páginas)`);
+    return allProducts;
+  }
+
   // ========== ÓRDENES DE VENTA ==========
   async getSaleOrders(filters: any[] = [], limit: number = 100): Promise<OdooSaleOrder[]> {
     return this.executeKw('sale.order', 'search_read', [filters], {

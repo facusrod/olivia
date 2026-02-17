@@ -18,7 +18,7 @@ export interface IPurchaseSuggestion extends Document {
   topSelling: ITopSelling[];
   analysis: string;
   generatedAt: Date;
-  userId: string;
+  generatedBy: string; // email de quien generó (informativo, no filtro)
   createdAt: Date;
   updatedAt: Date;
 }
@@ -42,15 +42,15 @@ const PurchaseSuggestionSchema = new Schema<IPurchaseSuggestion>(
     topSelling: { type: [TopSellingSchema], required: true },
     analysis: { type: String, required: true },
     generatedAt: { type: Date, required: true },
-    userId: { type: String, required: true, index: true },
+    generatedBy: { type: String, default: '' },
   },
   {
     timestamps: true,
   }
 );
 
-// Índice para obtener rápidamente la última sugerencia por usuario
-PurchaseSuggestionSchema.index({ userId: 1, createdAt: -1 });
+// Índice para obtener rápidamente la última sugerencia (compartida)
+PurchaseSuggestionSchema.index({ generatedAt: -1 });
 
 // Prevenir modelo duplicado en desarrollo (hot reload)
 const PurchaseSuggestion: Model<IPurchaseSuggestion> =

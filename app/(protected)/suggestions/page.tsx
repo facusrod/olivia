@@ -21,6 +21,7 @@ interface SuggestionsData {
   topSelling: TopSelling[];
   analysis: string;
   generatedAt: string | null;
+  generatedBy?: string | null;
   message?: string;
 }
 
@@ -247,6 +248,7 @@ export default function SuggestionsPage() {
                 <p className="text-sm text-gray-600">
                   Generado por Gemini AI -{' '}
                   {data.generatedAt && new Date(data.generatedAt).toLocaleString('es-ES')}
+                  {data.generatedBy && ` · por ${data.generatedBy}`}
                 </p>
               </div>
             </div>
