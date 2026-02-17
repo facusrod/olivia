@@ -108,7 +108,7 @@ class OdooClient {
         ...this.cfHeaders,
       },
       responseType: 'text',
-      timeout: 30000,
+      timeout: 60000,
     });
 
     // Deserializar la respuesta XML
