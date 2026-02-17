@@ -1,4 +1,9 @@
-import xmlrpc from 'xmlrpc';
+import axios from 'axios';
+import { Readable } from 'stream';
+
+// Importar serializer y deserializer de xmlrpc
+const Serializer = require('xmlrpc/lib/serializer');
+const Deserializer = require('xmlrpc/lib/deserializer');
 
 interface OdooConfig {
   url: string;
@@ -49,7 +54,7 @@ interface OdooPurchaseOrder {
 class OdooClient {
   private config: OdooConfig;
   private uid: number | null = null;
-  private clients: Map<string, xmlrpc.Client> = new Map();
+  private cfHeaders: Record<string, string> = {};
 
   constructor() {
     this.config = {
@@ -58,43 +63,66 @@ class OdooClient {
       username: process.env.ODOO_USERNAME || '',
       password: process.env.ODOO_PASSWORD || '',
     };
+
+    // Cloudflare Zero Trust headers (solo en produccion)
+    const cfClientId = process.env.CF_ACCESS_CLIENT_ID;
+    const cfClientSecret = process.env.CF_ACCESS_CLIENT_SECRET;
+    if (cfClientId && cfClientSecret) {
+      this.cfHeaders = {
+        'CF-Access-Client-Id': cfClientId,
+        'CF-Access-Client-Secret': cfClientSecret,
+      };
+    }
   }
 
-  private getClient(path: string): xmlrpc.Client {
-    if (this.clients.has(path)) {
-      return this.clients.get(path)!;
-    }
-    const url = new URL(this.config.url);
-    const client = xmlrpc.createClient({
-      host: url.hostname,
-      port: parseInt(url.port) || 8069,
-      path: `/xmlrpc/2/${path}`,
+  private async callXmlRpc(path: string, method: string, params: any[]): Promise<any> {
+    const xml = Serializer.serializeMethodCall(method, params);
+    const url = `${this.config.url}/xmlrpc/2/${path}`;
+
+    const response = await axios.post(url, xml, {
+      headers: {
+        'Content-Type': 'text/xml',
+        ...this.cfHeaders,
+      },
+      responseType: 'text',
+      timeout: 30000,
     });
-    this.clients.set(path, client);
-    return client;
+
+    // Deserializar la respuesta XML
+    return new Promise((resolve, reject) => {
+      const deserializer = new Deserializer();
+      const stream = Readable.from([response.data]);
+      deserializer.deserializeMethodResponse(stream, (error: any, result: any) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve(result);
+        }
+      });
+    });
   }
 
   async authenticate(): Promise<number> {
     if (this.uid) return this.uid;
 
-    return new Promise((resolve, reject) => {
-      const client = this.getClient('common');
-      client.methodCall(
-        'authenticate',
-        [this.config.db, this.config.username, this.config.password, {}],
-        (error: any, uid: number) => {
-          if (error) {
-            reject(new Error(`Odoo authentication failed: ${error?.message || error}`));
-          } else if (!uid) {
-            reject(new Error('Odoo authentication failed: Invalid credentials'));
-          } else {
-            this.uid = uid;
-            console.log('✅ Odoo authenticated, UID:', uid);
-            resolve(uid);
-          }
-        }
-      );
-    });
+    try {
+      const uid = await this.callXmlRpc('common', 'authenticate', [
+        this.config.db,
+        this.config.username,
+        this.config.password,
+        {},
+      ]);
+
+      if (!uid) {
+        throw new Error('Odoo authentication failed: Invalid credentials');
+      }
+
+      this.uid = uid;
+      console.log('✅ Odoo authenticated, UID:', uid);
+      return uid;
+    } catch (error: any) {
+      throw new Error(`Odoo authentication failed: ${error?.message || error}`);
+    }
   }
 
   private async executeKw(
@@ -105,28 +133,19 @@ class OdooClient {
   ): Promise<any> {
     const uid = await this.authenticate();
 
-    return new Promise((resolve, reject) => {
-      const client = this.getClient('object');
-      client.methodCall(
-        'execute_kw',
-        [
-          this.config.db,
-          uid,
-          this.config.password,
-          model,
-          method,
-          args,
-          kwargs,
-        ],
-        (error: any, result: any) => {
-          if (error) {
-            reject(new Error(`Odoo ${method} failed: ${error?.message || error}`));
-          } else {
-            resolve(result);
-          }
-        }
-      );
-    });
+    try {
+      return await this.callXmlRpc('object', 'execute_kw', [
+        this.config.db,
+        uid,
+        this.config.password,
+        model,
+        method,
+        args,
+        kwargs,
+      ]);
+    } catch (error: any) {
+      throw new Error(`Odoo ${method} failed: ${error?.message || error}`);
+    }
   }
 
   // ========== PRODUCTOS ==========
@@ -233,7 +252,6 @@ class OdooClient {
         return saleOrders;
       } catch (saleError) {
         console.error('Error getting orders from both POS and Sales:', { posError, saleError });
-        // Retornar array vacío si ambos fallan
         return [];
       }
     }
@@ -279,7 +297,6 @@ class OdooClient {
 
   async getExpiringProducts(daysThreshold: number = 30, limit: number = 10): Promise<any[]> {
     try {
-      // Calcular la fecha límite (hoy + daysThreshold)
       const now = new Date();
       const thresholdDate = new Date();
       thresholdDate.setDate(now.getDate() + daysThreshold);
@@ -287,7 +304,6 @@ class OdooClient {
       const nowStr = now.toISOString().split('T')[0];
       const thresholdStr = thresholdDate.toISOString().split('T')[0];
 
-      // Buscar lotes con fecha de vencimiento próxima
       const lots: OdooProductLot[] = await this.executeKw('stock.lot', 'search_read', [
         [
           '|', '|',
@@ -302,7 +318,7 @@ class OdooClient {
         ],
       ], {
         fields: ['id', 'name', 'product_id', 'product_qty', 'expiration_date', 'use_date', 'removal_date'],
-        limit: limit * 3, // Obtener más para agrupar por producto
+        limit: limit * 3,
         order: 'expiration_date asc, use_date asc, removal_date asc',
       });
 
@@ -310,14 +326,11 @@ class OdooClient {
         return [];
       }
 
-      // Agrupar por producto y sumar cantidades
       const productMap: { [key: number]: any } = {};
 
       for (const lot of lots) {
         const productId = lot.product_id[0];
         const productName = lot.product_id[1];
-
-        // Determinar la fecha de vencimiento más próxima
         const expirationDate = lot.expiration_date || lot.use_date || lot.removal_date;
 
         if (!expirationDate) continue;
@@ -332,7 +345,6 @@ class OdooClient {
             daysUntilExpiration: 0
           };
         } else {
-          // Si encontramos una fecha más cercana, actualizamos
           if (expirationDate < productMap[productId].expirationDate) {
             productMap[productId].expirationDate = expirationDate;
             productMap[productId].lotName = lot.name;
@@ -342,7 +354,6 @@ class OdooClient {
         productMap[productId].totalQty += lot.product_qty;
       }
 
-      // Calcular días hasta vencimiento y ordenar
       const products = Object.values(productMap).map(product => {
         const expDate = new Date(product.expirationDate);
         const diffTime = expDate.getTime() - now.getTime();
@@ -354,26 +365,22 @@ class OdooClient {
         };
       });
 
-      // Ordenar por días hasta vencimiento (más urgentes primero)
       return products
         .sort((a, b) => a.daysUntilExpiration - b.daysUntilExpiration)
         .slice(0, limit);
 
     } catch (error: any) {
       console.error('Error getting expiring products:', error?.message || error);
-      // Si el módulo de lotes no está disponible, retornar array vacío
       return [];
     }
   }
 
   async getTopSellingProducts(days: number = 30, limit: number = 10): Promise<any[]> {
     try {
-      // Obtener fecha de inicio
       const date = new Date();
       date.setDate(date.getDate() - days);
       const dateStr = date.toISOString().split('T')[0];
 
-      // Intentar primero con Point of Sale (pos.order.line)
       let orderLines;
       try {
         orderLines = await this.executeKw('pos.order.line', 'search_read', [
@@ -382,7 +389,6 @@ class OdooClient {
           fields: ['product_id', 'qty'],
         });
       } catch (posError) {
-        // Si POS falla, intentar con Sale Orders
         console.log('POS module not found, trying Sale Orders...');
         orderLines = await this.executeKw('sale.order.line', 'search_read', [
           [['order_id.date_order', '>=', dateStr], ['order_id.state', 'in', ['sale', 'done']]],
@@ -396,13 +402,11 @@ class OdooClient {
         return [];
       }
 
-      // Agrupar por producto
       const productSales: { [key: number]: { id: number; name: string; totalQty: number } } = {};
 
       for (const line of orderLines) {
         const productId = line.product_id[0];
         const productName = line.product_id[1];
-        // Usar 'qty' para POS o 'product_uom_qty' para Sales
         const quantity = line.qty || line.product_uom_qty || 0;
 
         if (!productSales[productId]) {
@@ -415,13 +419,11 @@ class OdooClient {
         productSales[productId].totalQty += quantity;
       }
 
-      // Ordenar y limitar
       return Object.values(productSales)
         .sort((a, b) => b.totalQty - a.totalQty)
         .slice(0, limit);
     } catch (error: any) {
       console.error('Error getting top selling products:', error?.message || error);
-      // Retornar array vacío si hay error
       return [];
     }
   }
