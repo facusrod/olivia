@@ -135,6 +135,18 @@ async function generateDashboardData() {
     ]),
   ]);
 
+  // Debug: ver qué devuelve Odoo
+  console.log('🔍 Dashboard debug:', {
+    todayOrders: todayOrders.length,
+    todayFirstOrder: todayOrders[0] ? { state: todayOrders[0].state, amount: todayOrders[0].amount_total, name: todayOrders[0].name } : null,
+    monthOrders: monthOrders.length,
+    monthFirstOrder: monthOrders[0] ? { state: monthOrders[0].state, amount: monthOrders[0].amount_total, name: monthOrders[0].name } : null,
+    lastMonthOrders: lastMonthOrders.length,
+    allProducts: allProducts.length,
+    todayFilter: startOfDay.toISOString(),
+    monthFilter: startOfMonth.toISOString(),
+  });
+
   // Calcular métricas de ventas
   const todayRevenue = todayOrders.reduce((sum: number, order: any) => sum + (order.amount_total || 0), 0);
   const monthRevenue = monthOrders.reduce((sum: number, order: any) => sum + (order.amount_total || 0), 0);
