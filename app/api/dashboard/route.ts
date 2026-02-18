@@ -99,11 +99,34 @@ export async function POST(req: NextRequest) {
 async function generateDashboardData() {
   const odoo = getOdooClient();
 
+  // Argentina = UTC-3. Todas las fechas se calculan en hora Argentina
+  // para que "hoy" y "este mes" coincidan con el horario del negocio.
+  const ART_OFFSET = 3; // horas a sumar a medianoche ART para obtener UTC
+
   const now = new Date();
-  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+  // Qué día es "hoy" en Argentina
+  const todayArg = new Date(now.getTime() - ART_OFFSET * 3600000);
+
+  // Medianoche de hoy en Argentina = 03:00 UTC del mismo día
+  const startOfDay = new Date(Date.UTC(
+    todayArg.getUTCFullYear(), todayArg.getUTCMonth(), todayArg.getUTCDate(),
+    ART_OFFSET, 0, 0
+  ));
+
+  // Primer día del mes actual en Argentina
+  const startOfMonth = new Date(Date.UTC(
+    todayArg.getUTCFullYear(), todayArg.getUTCMonth(), 1,
+    ART_OFFSET, 0, 0
+  ));
+
+  // Primer día del mes anterior en Argentina
+  const startOfLastMonth = new Date(Date.UTC(
+    todayArg.getUTCFullYear(), todayArg.getUTCMonth() - 1, 1,
+    ART_OFFSET, 0, 0
+  ));
+
+  // Fin del mes anterior = inicio del mes actual menos 1 segundo
+  const endOfLastMonth = new Date(startOfMonth.getTime() - 1000);
 
   // Ejecutar consultas en paralelo
   const [
