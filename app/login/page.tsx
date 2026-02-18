@@ -3,7 +3,7 @@
 import { signIn, useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState, Suspense } from 'react';
-import { Sprout } from 'lucide-react';
+import OliviaLogo from '@/components/OliviaLogo';
 
 function LoginContent() {
   const { data: session, status } = useSession();
@@ -41,8 +41,8 @@ function LoginContent() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-green-100">
       <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-500 rounded-full mb-4">
-            <Sprout className="w-10 h-10 text-white" />
+          <div className="inline-flex items-center justify-center mb-4">
+            <OliviaLogo size={64} className="text-primary-500" />
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">OlivIA</h1>
           <p className="text-gray-600">

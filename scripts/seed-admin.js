@@ -35,6 +35,7 @@ if (!MONGODB_URI) {
 const ADMIN_USERS = [
   { email: 'frcuutn@gmail.com', name: 'Facundo Rodriguez', role: 'admin' },
   { email: 'pontelli58@gmail.com', name: 'Pontelli', role: 'user' },
+  { email: 'greenhouse.cdelu@gmail.com', name: 'Green House CdelU', role: 'user' }
 ];
 
 const UserSchema = new mongoose.Schema({

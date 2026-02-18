@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Oliva body (O) - ellipse slightly tilted -->
+  <ellipse cx="30" cy="36" rx="16" ry="20" transform="rotate(-8 30 36)" stroke="#22c55e" stroke-width="4.5" fill="none"/>
+  <!-- Stem / I stroke - crosses through the olive top -->
+  <path d="M33 16 L31 42" stroke="#22c55e" stroke-width="3.5" stroke-linecap="round"/>
+  <!-- Leaf - elegant elongated shape angled from stem -->
+  <path d="M33 16 C38 8, 50 6, 52 10 C54 14, 44 18, 33 16Z" fill="#16a34a"/>
+</svg>

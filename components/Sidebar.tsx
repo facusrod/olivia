@@ -8,10 +8,10 @@ import {
   LayoutDashboard,
   MessageSquare,
   ShoppingCart,
-  Sprout,
   LogOut,
   ClipboardList,
 } from 'lucide-react';
+import OliviaLogo from './OliviaLogo';
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -49,9 +49,7 @@ export default function Sidebar() {
       <div className="w-64 bg-white h-screen flex flex-col">
         <div className="p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-primary-500 rounded-lg flex items-center justify-center">
-              <Sprout className="w-6 h-6 text-white" />
-            </div>
+            <OliviaLogo size={40} className="text-primary-500" />
             <div>
               <h1 className="text-xl font-bold text-gray-900">OlivIA</h1>
               <p className="text-xs text-gray-500">Asistente inteligente</p>
@@ -67,9 +65,7 @@ export default function Sidebar() {
       {/* Logo */}
       <div className="p-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-primary-500 rounded-lg flex items-center justify-center">
-            <Sprout className="w-6 h-6 text-white" />
-          </div>
+          <OliviaLogo size={40} className="text-primary-500" />
           <div>
             <h1 className="text-xl font-bold text-gray-900">OlivIA</h1>
             <p className="text-xs text-gray-500">Asistente inteligente</p>
