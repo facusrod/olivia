@@ -11,6 +11,18 @@ export interface IDashboardSnapshot extends Document {
   orders: {
     today: number;
     month: number;
+    pos: {
+      today: number;
+      month: number;
+      revenueToday: number;
+      revenueMonth: number;
+    };
+    ecommerce: {
+      today: number;
+      month: number;
+      revenueToday: number;
+      revenueMonth: number;
+    };
   };
   inventory: {
     lowStock: number;
@@ -49,6 +61,18 @@ const DashboardSnapshotSchema = new Schema<IDashboardSnapshot>(
     orders: {
       today: { type: Number, default: 0 },
       month: { type: Number, default: 0 },
+      pos: {
+        today: { type: Number, default: 0 },
+        month: { type: Number, default: 0 },
+        revenueToday: { type: Number, default: 0 },
+        revenueMonth: { type: Number, default: 0 },
+      },
+      ecommerce: {
+        today: { type: Number, default: 0 },
+        month: { type: Number, default: 0 },
+        revenueToday: { type: Number, default: 0 },
+        revenueMonth: { type: Number, default: 0 },
+      },
     },
     inventory: {
       lowStock: { type: Number, default: 0 },

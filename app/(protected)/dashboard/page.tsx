@@ -21,6 +21,8 @@ import {
   CalendarClock,
   RefreshCw,
   ClipboardList,
+  Store,
+  Globe,
 } from 'lucide-react';
 
 interface DashboardData {
@@ -34,6 +36,18 @@ interface DashboardData {
   orders: {
     today: number;
     month: number;
+    pos?: {
+      today: number;
+      month: number;
+      revenueToday: number;
+      revenueMonth: number;
+    };
+    ecommerce?: {
+      today: number;
+      month: number;
+      revenueToday: number;
+      revenueMonth: number;
+    };
   };
   inventory: {
     lowStock: number;
@@ -175,6 +189,22 @@ export default function DashboardPage() {
           <p className="text-sm text-gray-500 mt-2">
             {data.orders.today} órdenes hoy
           </p>
+          {(data.orders.pos || data.orders.ecommerce) && (
+            <div className="flex items-center gap-3 mt-1 text-xs text-gray-400">
+              {data.orders.pos && (
+                <span className="flex items-center gap-1">
+                  <Store className="w-3 h-3" />
+                  {data.orders.pos.today} PDV
+                </span>
+              )}
+              {data.orders.ecommerce && (
+                <span className="flex items-center gap-1">
+                  <Globe className="w-3 h-3" />
+                  {data.orders.ecommerce.today} Web
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Ventas del Mes */}
@@ -223,6 +253,22 @@ export default function DashboardPage() {
           <p className="text-sm text-gray-500 mt-2">
             {data.orders.month} órdenes este mes
           </p>
+          {(data.orders.pos || data.orders.ecommerce) && (
+            <div className="flex items-center gap-3 mt-1 text-xs text-gray-400">
+              {data.orders.pos && (
+                <span className="flex items-center gap-1">
+                  <Store className="w-3 h-3" />
+                  {data.orders.pos.month} PDV
+                </span>
+              )}
+              {data.orders.ecommerce && (
+                <span className="flex items-center gap-1">
+                  <Globe className="w-3 h-3" />
+                  {data.orders.ecommerce.month} Web
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Valor del Inventario */}

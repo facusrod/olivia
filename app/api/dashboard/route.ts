@@ -128,7 +128,9 @@ async function generateDashboardData() {
   // Fin del mes anterior = inicio del mes actual menos 1 segundo
   const endOfLastMonth = new Date(startOfMonth.getTime() - 1000);
 
-  // Ejecutar consultas en paralelo
+  const confirmedStates = ['sale', 'done', 'paid', 'invoiced'];
+
+  // Ejecutar consultas en paralelo (POS + Ecommerce + Inventario)
   const [
     lowStockProducts,
     topSellingProducts,
@@ -137,51 +139,75 @@ async function generateDashboardData() {
     todayOrders,
     monthOrders,
     lastMonthOrders,
+    ecommerceTodayOrders,
+    ecommerceMonthOrders,
+    ecommerceLastMonthOrders,
   ] = await Promise.all([
     odoo.getLowStockProducts(10),
     odoo.getTopSellingProducts(30, 5),
     odoo.getExpiringProducts(30, 10),
-    // ⚡ Ahora pagina automáticamente para obtener TODOS los productos
     odoo.getAllProducts([]),
+    // POS orders
     odoo.getOrders([
       ['date_order', '>=', startOfDay.toISOString()],
-      ['state', 'in', ['sale', 'done', 'paid', 'invoiced']],
+      ['state', 'in', confirmedStates],
     ]),
     odoo.getOrders([
       ['date_order', '>=', startOfMonth.toISOString()],
-      ['state', 'in', ['sale', 'done', 'paid', 'invoiced']],
+      ['state', 'in', confirmedStates],
     ]),
     odoo.getOrders([
       ['date_order', '>=', startOfLastMonth.toISOString()],
       ['date_order', '<=', endOfLastMonth.toISOString()],
-      ['state', 'in', ['sale', 'done', 'paid', 'invoiced']],
+      ['state', 'in', confirmedStates],
+    ]),
+    // Ecommerce orders
+    odoo.getEcommerceOrders([
+      ['date_order', '>=', startOfDay.toISOString()],
+      ['state', 'in', confirmedStates],
+    ]),
+    odoo.getEcommerceOrders([
+      ['date_order', '>=', startOfMonth.toISOString()],
+      ['state', 'in', confirmedStates],
+    ]),
+    odoo.getEcommerceOrders([
+      ['date_order', '>=', startOfLastMonth.toISOString()],
+      ['date_order', '<=', endOfLastMonth.toISOString()],
+      ['state', 'in', confirmedStates],
     ]),
   ]);
 
-  // Debug: ver qué devuelve Odoo
-  console.log('🔍 Dashboard debug:', {
-    todayOrders: todayOrders.length,
-    todayFirstOrder: todayOrders[0] ? { state: todayOrders[0].state, amount: todayOrders[0].amount_total, name: todayOrders[0].name } : null,
-    monthOrders: monthOrders.length,
-    monthFirstOrder: monthOrders[0] ? { state: monthOrders[0].state, amount: monthOrders[0].amount_total, name: monthOrders[0].name } : null,
-    lastMonthOrders: lastMonthOrders.length,
-    allProducts: allProducts.length,
-    todayFilter: startOfDay.toISOString(),
-    monthFilter: startOfMonth.toISOString(),
-  });
+  // Calcular revenue por canal
+  const posRevenueToday = todayOrders.reduce((sum: number, order: any) => sum + (order.amount_total || 0), 0);
+  const posRevenueMonth = monthOrders.reduce((sum: number, order: any) => sum + (order.amount_total || 0), 0);
+  const posRevenueLastMonth = lastMonthOrders.reduce((sum: number, order: any) => sum + (order.amount_total || 0), 0);
 
-  // Calcular métricas de ventas
-  const todayRevenue = todayOrders.reduce((sum: number, order: any) => sum + (order.amount_total || 0), 0);
-  const monthRevenue = monthOrders.reduce((sum: number, order: any) => sum + (order.amount_total || 0), 0);
-  const lastMonthRevenue = lastMonthOrders.reduce((sum: number, order: any) => sum + (order.amount_total || 0), 0);
+  const ecomRevenueToday = ecommerceTodayOrders.reduce((sum: number, order: any) => sum + (order.amount_total || 0), 0);
+  const ecomRevenueMonth = ecommerceMonthOrders.reduce((sum: number, order: any) => sum + (order.amount_total || 0), 0);
+  const ecomRevenueLastMonth = ecommerceLastMonthOrders.reduce((sum: number, order: any) => sum + (order.amount_total || 0), 0);
+
+  // Totales combinados
+  const todayRevenue = posRevenueToday + ecomRevenueToday;
+  const monthRevenue = posRevenueMonth + ecomRevenueMonth;
+  const lastMonthRevenue = posRevenueLastMonth + ecomRevenueLastMonth;
+
+  const totalOrdersToday = todayOrders.length + ecommerceTodayOrders.length;
+  const totalOrdersMonth = monthOrders.length + ecommerceMonthOrders.length;
 
   const growthPercentage = lastMonthRevenue > 0
     ? ((monthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100
     : 0;
 
-  const averageTicket = monthOrders.length > 0
-    ? monthRevenue / monthOrders.length
+  const averageTicket = totalOrdersMonth > 0
+    ? monthRevenue / totalOrdersMonth
     : 0;
+
+  // Debug
+  console.log('🔍 Dashboard debug:', {
+    pos: { today: todayOrders.length, month: monthOrders.length },
+    ecommerce: { today: ecommerceTodayOrders.length, month: ecommerceMonthOrders.length },
+    revenue: { posToday: posRevenueToday, ecomToday: ecomRevenueToday, total: todayRevenue },
+  });
 
   // Métricas de inventario (ahora con TODOS los productos)
   const outOfStockCount = allProducts.filter((p: any) => p.qty_available <= 0).length;
@@ -208,8 +234,20 @@ async function generateDashboardData() {
       averageTicket,
     },
     orders: {
-      today: todayOrders.length,
-      month: monthOrders.length,
+      today: totalOrdersToday,
+      month: totalOrdersMonth,
+      pos: {
+        today: todayOrders.length,
+        month: monthOrders.length,
+        revenueToday: posRevenueToday,
+        revenueMonth: posRevenueMonth,
+      },
+      ecommerce: {
+        today: ecommerceTodayOrders.length,
+        month: ecommerceMonthOrders.length,
+        revenueToday: ecomRevenueToday,
+        revenueMonth: ecomRevenueMonth,
+      },
     },
     inventory: {
       lowStock: lowStockProducts.length,
