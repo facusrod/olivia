@@ -115,65 +115,65 @@ export default function OrdersPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-4 md:space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl text-gray-900">Pedidos Web</h1>
-        <p className="text-gray-600 mt-1">
+        <h1 className="text-xl md:text-2xl text-gray-900">Pedidos Web</h1>
+        <p className="text-sm md:text-base text-gray-600 mt-1">
           Pedidos del ecommerce pendientes de preparar
         </p>
       </div>
 
       {/* Tarjetas resumen */}
       {summary && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg transition-shadow">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <ShoppingCart className="w-6 h-6 text-blue-600" />
+        <div className="grid grid-cols-3 gap-3 md:gap-6">
+          <div className="bg-white rounded-xl border border-gray-200 p-3 md:p-6 hover:shadow-lg transition-shadow">
+            <div className="flex items-center justify-between mb-2 md:mb-4">
+              <div className="w-9 h-9 md:w-12 md:h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                <ShoppingCart className="w-4 h-4 md:w-6 md:h-6 text-blue-600" />
               </div>
               {summary.pendingCount > 0 && (
                 <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse" />
               )}
             </div>
-            <h3 className="text-sm font-medium text-gray-600 mb-1">Pedidos Pendientes</h3>
-            <p className="text-3xl text-gray-900">{summary.pendingCount}</p>
-            <p className="text-sm text-gray-500 mt-2">Sin pagar + por preparar</p>
+            <h3 className="text-xs md:text-sm font-medium text-gray-600 mb-1">Pendientes</h3>
+            <p className="text-xl md:text-3xl text-gray-900">{summary.pendingCount}</p>
+            <p className="text-xs text-gray-500 mt-1 md:mt-2 hidden sm:block">Sin pagar + por preparar</p>
           </div>
 
-          <div className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg transition-shadow">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <DollarSign className="w-6 h-6 text-green-600" />
+          <div className="bg-white rounded-xl border border-gray-200 p-3 md:p-6 hover:shadow-lg transition-shadow">
+            <div className="flex items-center justify-between mb-2 md:mb-4">
+              <div className="w-9 h-9 md:w-12 md:h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                <DollarSign className="w-4 h-4 md:w-6 md:h-6 text-green-600" />
               </div>
             </div>
-            <h3 className="text-sm font-medium text-gray-600 mb-1">Monto Total Pendiente</h3>
-            <p className="text-3xl text-gray-900">
+            <h3 className="text-xs md:text-sm font-medium text-gray-600 mb-1">Monto Pend.</h3>
+            <p className="text-lg md:text-3xl text-gray-900">
               {formatCurrency(summary.totalPendingAmount)}
             </p>
-            <p className="text-sm text-gray-500 mt-2">Sin pagar + confirmados</p>
+            <p className="text-xs text-gray-500 mt-1 md:mt-2 hidden sm:block">Sin pagar + confirmados</p>
           </div>
 
-          <div className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg transition-shadow">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                <Calendar className="w-6 h-6 text-purple-600" />
+          <div className="bg-white rounded-xl border border-gray-200 p-3 md:p-6 hover:shadow-lg transition-shadow">
+            <div className="flex items-center justify-between mb-2 md:mb-4">
+              <div className="w-9 h-9 md:w-12 md:h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                <Calendar className="w-4 h-4 md:w-6 md:h-6 text-purple-600" />
               </div>
             </div>
-            <h3 className="text-sm font-medium text-gray-600 mb-1">Pedidos Hoy</h3>
-            <p className="text-3xl text-gray-900">{summary.todayCount}</p>
-            <p className="text-sm text-gray-500 mt-2">Ingresados hoy</p>
+            <h3 className="text-xs md:text-sm font-medium text-gray-600 mb-1">Hoy</h3>
+            <p className="text-xl md:text-3xl text-gray-900">{summary.todayCount}</p>
+            <p className="text-xs text-gray-500 mt-1 md:mt-2 hidden sm:block">Ingresados hoy</p>
           </div>
         </div>
       )}
 
       {/* Tabs de filtro */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 md:mx-0 md:px-0">
         {tabs.map((tab) => (
           <button
             key={tab.key}
             onClick={() => handleTabChange(tab.key)}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
+            className={`px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-semibold transition-colors whitespace-nowrap flex-shrink-0 ${
               activeTab === tab.key
                 ? 'bg-primary-600 text-white'
                 : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
@@ -184,44 +184,84 @@ export default function OrdersPage() {
         ))}
       </div>
 
-      {/* Tabla de pedidos */}
+      {/* Lista de pedidos: cards en mobile, tabla en desktop */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-6 h-6 animate-spin text-primary-600" />
           </div>
+        ) : orders.length === 0 ? (
+          <div className="px-6 py-12 text-center text-gray-500">
+            <ShoppingCart className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+            <p>No hay pedidos {activeTab === 'sent' ? 'sin pagar' : activeTab === 'sale' ? 'confirmados' : activeTab === 'done' ? 'completados' : ''}</p>
+          </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="text-left px-6 py-3 text-sm font-semibold text-gray-900">
-                    Pedido
-                  </th>
-                  <th className="text-left px-6 py-3 text-sm font-semibold text-gray-900">
-                    Cliente
-                  </th>
-                  <th className="text-left px-6 py-3 text-sm font-semibold text-gray-900">
-                    Fecha
-                  </th>
-                  <th className="text-right px-6 py-3 text-sm font-semibold text-gray-900">
-                    Total
-                  </th>
-                  <th className="text-center px-6 py-3 text-sm font-semibold text-gray-900">
-                    Estado
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {orders.length === 0 ? (
+          <>
+            {/* Mobile: card list */}
+            <div className="md:hidden divide-y divide-gray-200">
+              {orders.map((order) => {
+                const badge = getStateBadge(order.state);
+                return (
+                  <div
+                    key={order.id}
+                    onClick={() => router.push(`/orders/${order.id}`)}
+                    className="p-4 hover:bg-gray-50 cursor-pointer transition-colors active:bg-gray-100"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-primary-700 text-sm">{order.name}</p>
+                        <ExternalLink className="w-3 h-3 text-gray-400" />
+                      </div>
+                      <span
+                        className={`inline-block px-2 py-0.5 text-xs font-semibold rounded-full ${badge.color}`}
+                      >
+                        {badge.label}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-700 truncate">{order.partner_id[1]}</p>
+                    <div className="flex items-center justify-between mt-2">
+                      <div className="flex items-center gap-1 text-xs text-gray-500">
+                        <Clock className="w-3 h-3" />
+                        {new Date(order.date_order).toLocaleString('es-ES', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </div>
+                      <p className="font-semibold text-gray-900 text-sm">
+                        {formatCurrency(order.amount_total)}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop: table */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
-                      <ShoppingCart className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                      <p>No hay pedidos {activeTab === 'sent' ? 'sin pagar' : activeTab === 'sale' ? 'confirmados' : activeTab === 'done' ? 'completados' : ''}</p>
-                    </td>
+                    <th className="text-left px-6 py-3 text-sm font-semibold text-gray-900">
+                      Pedido
+                    </th>
+                    <th className="text-left px-6 py-3 text-sm font-semibold text-gray-900">
+                      Cliente
+                    </th>
+                    <th className="text-left px-6 py-3 text-sm font-semibold text-gray-900">
+                      Fecha
+                    </th>
+                    <th className="text-right px-6 py-3 text-sm font-semibold text-gray-900">
+                      Total
+                    </th>
+                    <th className="text-center px-6 py-3 text-sm font-semibold text-gray-900">
+                      Estado
+                    </th>
                   </tr>
-                ) : (
-                  orders.map((order) => {
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {orders.map((order) => {
                     const badge = getStateBadge(order.state);
                     return (
                       <tr
@@ -264,27 +304,26 @@ export default function OrdersPage() {
                         </td>
                       </tr>
                     );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
 
         {/* Paginación */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-6 py-4 bg-white border-t border-gray-200">
-            <div className="text-sm text-gray-700">
-              Mostrando {(currentPage - 1) * ordersPerPage + 1} a{' '}
-              {Math.min(currentPage * ordersPerPage, totalOrders)} de {totalOrders} pedidos
+          <div className="flex items-center justify-between px-4 md:px-6 py-3 md:py-4 bg-white border-t border-gray-200">
+            <div className="text-xs md:text-sm text-gray-700">
+              <span className="hidden sm:inline">Mostrando </span>{(currentPage - 1) * ordersPerPage + 1}-{Math.min(currentPage * ordersPerPage, totalOrders)} de {totalOrders}
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-1 md:space-x-2">
               <button
                 onClick={() => handlePageChange(currentPage - 1)}
                 disabled={currentPage === 1}
-                className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="p-1.5 md:p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <ChevronLeft className="w-5 h-5" />
+                <ChevronLeft className="w-4 h-4 md:w-5 md:h-5" />
               </button>
 
               <div className="flex items-center space-x-1">
@@ -304,7 +343,7 @@ export default function OrdersPage() {
                     <button
                       key={pageNum}
                       onClick={() => handlePageChange(pageNum)}
-                      className={`px-3 py-2 text-sm font-medium rounded-md ${
+                      className={`px-2.5 py-1.5 md:px-3 md:py-2 text-xs md:text-sm font-medium rounded-md ${
                         currentPage === pageNum
                           ? 'bg-primary-600 text-white'
                           : 'text-gray-700 hover:bg-gray-100'
@@ -319,9 +358,9 @@ export default function OrdersPage() {
               <button
                 onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage === totalPages}
-                className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="p-1.5 md:p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <ChevronRight className="w-5 h-5" />
+                <ChevronRight className="w-4 h-4 md:w-5 md:h-5" />
               </button>
             </div>
           </div>

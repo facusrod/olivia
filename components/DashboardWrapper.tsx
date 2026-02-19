@@ -21,8 +21,8 @@ export default function DashboardWrapper({
   return (
     <div className="flex h-screen bg-gray-50">
       <Sidebar />
-      <div className="w-px bg-gray-200" />
-      <main className="flex-1 overflow-auto">{children}</main>
+      <div className="hidden md:block w-px bg-gray-200" />
+      <main className="flex-1 overflow-auto pt-14 md:pt-0">{children}</main>
     </div>
   );
 }

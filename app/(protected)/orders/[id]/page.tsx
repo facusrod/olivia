@@ -103,7 +103,7 @@ export default function OrderDetailPage() {
 
   if (error || !order) {
     return (
-      <div className="p-6">
+      <div className="p-4 md:p-6">
         <button
           onClick={() => router.push('/orders')}
           className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors mb-6"
@@ -124,7 +124,7 @@ export default function OrderDetailPage() {
     : order.partner_id[1];
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-4 md:space-y-6">
       {/* Botón volver */}
       <button
         onClick={() => router.push('/orders')}
@@ -137,42 +137,42 @@ export default function OrderDetailPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl text-gray-900">{order.name}</h1>
-          <p className="text-gray-600 mt-1">Detalle del pedido</p>
+          <h1 className="text-xl md:text-2xl text-gray-900">{order.name}</h1>
+          <p className="text-sm md:text-base text-gray-600 mt-1">Detalle del pedido</p>
         </div>
         <span
-          className={`px-4 py-2 text-sm font-semibold rounded-full ${badge.color}`}
+          className={`px-3 py-1.5 md:px-4 md:py-2 text-xs md:text-sm font-semibold rounded-full ${badge.color}`}
         >
           {badge.label}
         </span>
       </div>
 
       {/* Grid de información */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
         {/* Cliente */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-              <User className="w-5 h-5 text-blue-600" />
+        <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6">
+          <div className="flex items-center gap-3 mb-3 md:mb-4">
+            <div className="w-9 h-9 md:w-10 md:h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+              <User className="w-4 h-4 md:w-5 md:h-5 text-blue-600" />
             </div>
-            <h3 className="text-lg text-gray-900">Cliente</h3>
+            <h3 className="text-base md:text-lg text-gray-900">Cliente</h3>
           </div>
-          <p className="text-gray-700 font-medium">{order.partner_id[1]}</p>
+          <p className="text-sm md:text-base text-gray-700 font-medium">{order.partner_id[1]}</p>
         </div>
 
         {/* Fechas */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-              <Calendar className="w-5 h-5 text-purple-600" />
+        <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6">
+          <div className="flex items-center gap-3 mb-3 md:mb-4">
+            <div className="w-9 h-9 md:w-10 md:h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+              <Calendar className="w-4 h-4 md:w-5 md:h-5 text-purple-600" />
             </div>
-            <h3 className="text-lg text-gray-900">Fechas</h3>
+            <h3 className="text-base md:text-lg text-gray-900">Fechas</h3>
           </div>
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-gray-400" />
-              <span className="text-sm text-gray-600">Fecha del pedido:</span>
-              <span className="text-sm text-gray-900 font-medium">
+              <Clock className="w-4 h-4 text-gray-400 flex-shrink-0" />
+              <span className="text-xs md:text-sm text-gray-600">Pedido:</span>
+              <span className="text-xs md:text-sm text-gray-900 font-medium">
                 {new Date(order.date_order).toLocaleString('es-ES', {
                   day: '2-digit',
                   month: '2-digit',
@@ -184,9 +184,9 @@ export default function OrderDetailPage() {
             </div>
             {order.commitment_date && (
               <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-gray-400" />
-                <span className="text-sm text-gray-600">Fecha de entrega:</span>
-                <span className="text-sm text-gray-900 font-medium">
+                <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                <span className="text-xs md:text-sm text-gray-600">Entrega:</span>
+                <span className="text-xs md:text-sm text-gray-900 font-medium">
                   {new Date(order.commitment_date).toLocaleDateString('es-ES')}
                 </span>
               </div>
@@ -195,44 +195,72 @@ export default function OrderDetailPage() {
         </div>
 
         {/* Dirección de envío */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-              <MapPin className="w-5 h-5 text-green-600" />
+        <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6">
+          <div className="flex items-center gap-3 mb-3 md:mb-4">
+            <div className="w-9 h-9 md:w-10 md:h-10 bg-green-100 rounded-lg flex items-center justify-center">
+              <MapPin className="w-4 h-4 md:w-5 md:h-5 text-green-600" />
             </div>
-            <h3 className="text-lg text-gray-900">Dirección de Envío</h3>
+            <h3 className="text-base md:text-lg text-gray-900">Dirección de Envío</h3>
           </div>
-          <p className="text-gray-700">{shippingAddress}</p>
+          <p className="text-sm md:text-base text-gray-700">{shippingAddress}</p>
         </div>
 
         {/* Notas */}
         {order.note && (
-          <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-                <FileText className="w-5 h-5 text-orange-600" />
+          <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6">
+            <div className="flex items-center gap-3 mb-3 md:mb-4">
+              <div className="w-9 h-9 md:w-10 md:h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                <FileText className="w-4 h-4 md:w-5 md:h-5 text-orange-600" />
               </div>
-              <h3 className="text-lg text-gray-900">Notas del Cliente</h3>
+              <h3 className="text-base md:text-lg text-gray-900">Notas del Cliente</h3>
             </div>
-            <p className="text-gray-700 whitespace-pre-wrap">{order.note}</p>
+            <p className="text-sm md:text-base text-gray-700 whitespace-pre-wrap">{order.note}</p>
           </div>
         )}
       </div>
 
       {/* Productos del pedido */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
+        <div className="px-4 md:px-6 py-3 md:py-4 border-b border-gray-200">
           <div className="flex items-center gap-3">
             <Package className="w-5 h-5 text-gray-600" />
-            <h3 className="text-lg text-gray-900">
+            <h3 className="text-base md:text-lg text-gray-900">
               Productos a preparar
             </h3>
-            <span className="text-sm text-gray-500">
+            <span className="text-xs md:text-sm text-gray-500">
               ({lines.length} {lines.length === 1 ? 'producto' : 'productos'})
             </span>
           </div>
         </div>
-        <div className="overflow-x-auto">
+
+        {/* Mobile: card list */}
+        <div className="md:hidden divide-y divide-gray-200">
+          {lines.map((line) => (
+            <div key={line.id} className="p-4">
+              <p className="font-medium text-gray-900 text-sm">{line.product_id[1]}</p>
+              {line.name !== line.product_id[1] && (
+                <p className="text-xs text-gray-500 mt-0.5 truncate">{line.name}</p>
+              )}
+              <div className="flex items-center justify-between mt-2">
+                <div className="text-xs text-gray-600">
+                  {line.product_uom_qty} x {formatCurrency(line.price_unit)}
+                </div>
+                <p className="font-semibold text-gray-900 text-sm">
+                  {formatCurrency(line.price_subtotal)}
+                </p>
+              </div>
+            </div>
+          ))}
+          <div className="p-4 bg-gray-50 flex items-center justify-between">
+            <p className="font-semibold text-gray-900">Total</p>
+            <p className="text-lg font-bold text-primary-700">
+              {formatCurrency(order.amount_total)}
+            </p>
+          </div>
+        </div>
+
+        {/* Desktop: table */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
