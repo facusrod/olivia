@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Send, Loader2, Sparkles, MessageSquareMore } from 'lucide-react';
 import ChatSidebar from '@/components/ChatSidebar';
+import MarkdownRenderer from '@/components/MarkdownRenderer';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -201,7 +202,11 @@ export default function ChatPage() {
                       : 'bg-white text-gray-900 border border-gray-200'
                   }`}
                 >
-                  <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                  {message.role === 'assistant' ? (
+                    <MarkdownRenderer content={message.content} />
+                  ) : (
+                    <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                  )}
                   <p
                     className={`text-xs mt-1 ${
                       message.role === 'user'

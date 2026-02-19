@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { ShoppingCart, TrendingUp, AlertTriangle, Loader2, RefreshCw, Sparkles } from 'lucide-react';
+import MarkdownRenderer from '@/components/MarkdownRenderer';
 
 interface Product {
   id: number;
@@ -253,12 +254,8 @@ export default function SuggestionsPage() {
               </div>
             </div>
 
-            <div className="prose max-w-none">
-              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                <pre className="whitespace-pre-wrap text-sm text-gray-700 font-sans">
-                  {data.analysis}
-                </pre>
-              </div>
+            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+              <MarkdownRenderer content={data.analysis} />
             </div>
           </div>
 
