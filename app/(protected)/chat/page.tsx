@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Send, Loader2, Sparkles } from 'lucide-react';
+import { Send, Loader2, Sparkles, MessageSquareMore } from 'lucide-react';
 import ChatSidebar from '@/components/ChatSidebar';
 
 interface Message {
@@ -16,6 +16,7 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [loadingConversation, setLoadingConversation] = useState(false);
+  const [chatSidebarOpen, setChatSidebarOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -127,41 +128,57 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-[calc(100vh-3.5rem)] md:h-screen bg-gray-50">
       {/* Sidebar */}
       <ChatSidebar
         currentConversationId={conversationId}
         onSelectConversation={loadConversation}
         onNewChat={handleNewChat}
+        mobileOpen={chatSidebarOpen}
+        onMobileClose={() => setChatSidebarOpen(false)}
       />
 
       {/* Main Chat Area */}
-      <div className="flex flex-col flex-1">
+      <div className="flex flex-col flex-1 min-w-0">
+        {/* Mobile chat header */}
+        <div className="md:hidden flex items-center gap-3 px-4 py-2.5 bg-white border-b border-gray-200">
+          <button
+            onClick={() => setChatSidebarOpen(true)}
+            className="p-1.5 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
+            aria-label="Ver conversaciones"
+          >
+            <MessageSquareMore className="w-5 h-5" />
+          </button>
+          <h2 className="text-sm font-semibold text-gray-900 truncate">
+            {conversationId ? 'Conversación' : 'Nuevo Chat'}
+          </h2>
+        </div>
+
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+        <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4">
           {loadingConversation ? (
             <div className="flex items-center justify-center h-full">
               <Loader2 className="w-8 h-8 animate-spin text-primary-600" />
             </div>
           ) : messages.length === 0 ? (
-            <div className="text-center py-12">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-100 rounded-full mb-4">
-              <Sparkles className="w-8 h-8 text-primary-600" />
+            <div className="text-center py-8 md:py-12">
+            <div className="inline-flex items-center justify-center w-14 h-14 md:w-16 md:h-16 bg-primary-100 rounded-full mb-4">
+              <Sparkles className="w-7 h-7 md:w-8 md:h-8 text-primary-600" />
             </div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            <h2 className="text-lg md:text-xl font-semibold text-gray-900 mb-2">
               ¡Hola! Soy OlivIA
             </h2>
-            <p className="text-gray-600 mb-6 max-w-md mx-auto">
+            <p className="text-sm md:text-base text-gray-600 mb-6 max-w-md mx-auto px-4">
               Estoy aquí para ayudarte con información sobre productos, inventario y
               sugerencias de compra. Pregúntame lo que necesites.
             </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-2xl mx-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-3 max-w-2xl mx-auto px-2">
               {quickQuestions.map((question, idx) => (
                 <button
                   key={idx}
                   onClick={() => sendMessageWithText(question)}
                   disabled={loading}
-                  className="px-4 py-3 bg-white text-gray-900 border border-gray-200 rounded-lg text-sm text-left hover:border-primary-300 hover:bg-primary-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-3 md:px-4 py-2.5 md:py-3 bg-white text-gray-900 border border-gray-200 rounded-lg text-sm text-left hover:border-primary-300 hover:bg-primary-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {question}
                 </button>
@@ -178,7 +195,7 @@ export default function ChatPage() {
                 }`}
               >
                 <div
-                  className={`max-w-[70%] rounded-2xl px-4 py-3 ${
+                  className={`max-w-[85%] md:max-w-[70%] rounded-2xl px-4 py-3 ${
                     message.role === 'user'
                       ? 'bg-primary-600 text-white'
                       : 'bg-white text-gray-900 border border-gray-200'
@@ -213,21 +230,21 @@ export default function ChatPage() {
         </div>
 
         {/* Input */}
-        <div className="bg-gray-50 p-4">
+        <div className="bg-gray-50 p-3 md:p-4">
         <form onSubmit={sendMessage} className="max-w-4xl mx-auto">
-          <div className="flex gap-3 items-center">
+          <div className="flex gap-2 md:gap-3 items-center">
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Escribe tu pregunta..."
-              className="flex-1 px-4 py-3 rounded-lg bg-white border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-500 text-gray-900"
+              className="flex-1 px-3 md:px-4 py-2.5 md:py-3 rounded-lg bg-white border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-500 text-gray-900 text-sm md:text-base"
               disabled={loading}
             />
             <button
               type="submit"
               disabled={!input.trim() || loading}
-              className="px-6 py-3 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+              className="px-4 md:px-6 py-2.5 md:py-3 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
             >
               {loading ? (
                 <Loader2 className="w-5 h-5 animate-spin" />

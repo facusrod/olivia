@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { MessageSquare, Trash2, Loader2, Clock, Plus, Search } from 'lucide-react';
+import { MessageSquare, Trash2, Loader2, Clock, Search, X } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -19,6 +19,8 @@ interface ChatSidebarProps {
   onSelectConversation: (conversationId: string) => void;
   onNewChat: () => void;
   onConversationsChange?: () => void;
+  mobileOpen?: boolean;
+  onMobileClose?: () => void;
 }
 
 export default function ChatSidebar({
@@ -26,6 +28,8 @@ export default function ChatSidebar({
   onSelectConversation,
   onNewChat,
   onConversationsChange,
+  mobileOpen = false,
+  onMobileClose,
 }: ChatSidebarProps) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -34,6 +38,18 @@ export default function ChatSidebar({
   useEffect(() => {
     loadConversations();
   }, []);
+
+  // Prevent body scroll when mobile sidebar is open
+  useEffect(() => {
+    if (mobileOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [mobileOpen]);
 
   const loadConversations = async () => {
     try {
@@ -73,13 +89,23 @@ export default function ChatSidebar({
     }
   };
 
+  const handleSelectConversation = (convId: string) => {
+    onSelectConversation(convId);
+    onMobileClose?.();
+  };
+
+  const handleNewChat = () => {
+    onNewChat();
+    onMobileClose?.();
+  };
+
   const filteredConversations = conversations.filter((conv) =>
     conv.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     conv.lastMessage.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  return (
-    <div className="w-80 bg-white border-r border-gray-200 flex flex-col h-full">
+  const sidebarContent = (
+    <>
       {/* Search */}
       <div className="p-4">
         <div className="relative">
@@ -88,7 +114,7 @@ export default function ChatSidebar({
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search"
+            placeholder="Buscar"
             className="w-full pl-10 pr-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
           />
         </div>
@@ -104,7 +130,7 @@ export default function ChatSidebar({
           <div className="p-2 space-y-1">
             {/* New Chat Button - Styled as list item */}
             <button
-              onClick={onNewChat}
+              onClick={handleNewChat}
               className="w-full group relative p-3 rounded-lg cursor-pointer transition-colors hover:bg-gray-50 text-left"
             >
               <div className="flex items-start gap-2">
@@ -131,7 +157,7 @@ export default function ChatSidebar({
             {filteredConversations.map((conversation) => (
               <div
                 key={conversation.id}
-                onClick={() => onSelectConversation(conversation.id)}
+                onClick={() => handleSelectConversation(conversation.id)}
                 className={`group relative p-3 rounded-lg cursor-pointer transition-colors ${
                   currentConversationId === conversation.id
                     ? 'bg-primary-50 border border-primary-200'
@@ -180,6 +206,41 @@ export default function ChatSidebar({
           </div>
         )}
       </div>
-    </div>
+    </>
+  );
+
+  return (
+    <>
+      {/* Mobile overlay */}
+      {mobileOpen && (
+        <div
+          className="md:hidden fixed inset-0 z-40 bg-black/50"
+          onClick={onMobileClose}
+        />
+      )}
+
+      {/* Mobile drawer */}
+      <div
+        className={`md:hidden fixed top-14 left-0 bottom-0 z-40 w-80 max-w-[85vw] bg-white shadow-xl flex flex-col transform transition-transform duration-300 ease-in-out ${
+          mobileOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+          <h3 className="font-semibold text-gray-900 text-sm">Conversaciones</h3>
+          <button
+            onClick={onMobileClose}
+            className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        {sidebarContent}
+      </div>
+
+      {/* Desktop sidebar */}
+      <div className="hidden md:flex w-80 bg-white border-r border-gray-200 flex-col h-full">
+        {sidebarContent}
+      </div>
+    </>
   );
 }
