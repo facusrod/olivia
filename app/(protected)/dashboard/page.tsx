@@ -362,7 +362,7 @@ export default function DashboardPage() {
               <p className="text-xs md:text-sm text-gray-600">Próximos 30 días</p>
             </div>
           </div>
-          <div className="space-y-3">
+          <div className="space-y-3 max-h-[420px] overflow-y-auto">
             {data.products.expiring.length === 0 ? (
               <div className="text-center py-6 md:py-8 text-gray-500">
                 <CalendarClock className="w-10 h-10 md:w-12 md:h-12 mx-auto mb-3 text-gray-300" />
@@ -431,7 +431,7 @@ export default function DashboardPage() {
               <p className="text-xs md:text-sm text-gray-600">Últimos 30 días</p>
             </div>
           </div>
-          <div className="space-y-3">
+          <div className="space-y-3 max-h-[420px] overflow-y-auto">
             {data.products.topSelling.map((product, idx) => (
               <div
                 key={product.id}
@@ -466,7 +466,7 @@ export default function DashboardPage() {
               <p className="text-xs md:text-sm text-gray-600">Requieren atención urgente</p>
             </div>
           </div>
-          <div className="space-y-3">
+          <div className="space-y-3 max-h-[420px] overflow-y-auto">
             {data.products.lowStock.length === 0 ? (
               <div className="text-center py-6 md:py-8 text-gray-500">
                 <Package className="w-10 h-10 md:w-12 md:h-12 mx-auto mb-3 text-gray-300" />
