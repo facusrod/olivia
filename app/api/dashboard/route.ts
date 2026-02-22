@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
       .sort({ generatedAt: -1 })
       .lean();
 
-    if (lastSnapshot) {
+    if (lastSnapshot && lastSnapshot.generatedAt >= new Date(Date.now() - 60 * 60 * 1000)) { // Si el snapshot es reciente (menos de 1 hora), devolverlo
       return NextResponse.json({
         sales: lastSnapshot.sales,
         orders: lastSnapshot.orders,
