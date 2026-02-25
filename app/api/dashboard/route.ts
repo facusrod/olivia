@@ -147,30 +147,30 @@ async function generateDashboardData() {
     odoo.getTopSellingProducts(30, 5),
     odoo.getExpiringProducts(30, 10),
     odoo.getAllProducts([]),
-    // POS orders
-    odoo.getOrders([
+    // POS orders (paginado para traer todas)
+    odoo.getAllOrders([
       ['date_order', '>=', startOfDay.toISOString()],
       ['state', 'in', confirmedStates],
     ]),
-    odoo.getOrders([
+    odoo.getAllOrders([
       ['date_order', '>=', startOfMonth.toISOString()],
       ['state', 'in', confirmedStates],
     ]),
-    odoo.getOrders([
+    odoo.getAllOrders([
       ['date_order', '>=', startOfLastMonth.toISOString()],
       ['date_order', '<=', endOfLastMonth.toISOString()],
       ['state', 'in', confirmedStates],
     ]),
-    // Ecommerce orders
-    odoo.getEcommerceOrders([
+    // Ecommerce orders (paginado para traer todas)
+    odoo.getAllEcommerceOrders([
       ['date_order', '>=', startOfDay.toISOString()],
       ['state', 'in', confirmedStates],
     ]),
-    odoo.getEcommerceOrders([
+    odoo.getAllEcommerceOrders([
       ['date_order', '>=', startOfMonth.toISOString()],
       ['state', 'in', confirmedStates],
     ]),
-    odoo.getEcommerceOrders([
+    odoo.getAllEcommerceOrders([
       ['date_order', '>=', startOfLastMonth.toISOString()],
       ['date_order', '<=', endOfLastMonth.toISOString()],
       ['state', 'in', confirmedStates],

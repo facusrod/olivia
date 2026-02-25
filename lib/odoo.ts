@@ -279,12 +279,13 @@ class OdooClient {
   }
 
   // Método genérico para obtener órdenes (intenta POS primero, luego Sales)
-  async getOrders(filters: any[] = [], limit: number = 100): Promise<any[]> {
+  async getOrders(filters: any[] = [], limit: number = 100, offset: number = 0): Promise<any[]> {
     try {
       // Intentar primero con POS orders
       const posOrders = await this.executeKw('pos.order', 'search_read', [filters], {
         fields: ['id', 'name', 'partner_id', 'date_order', 'amount_total', 'state'],
         limit,
+        offset,
         order: 'date_order desc',
       });
       return posOrders;
@@ -294,6 +295,7 @@ class OdooClient {
         const saleOrders = await this.executeKw('sale.order', 'search_read', [filters], {
           fields: ['id', 'name', 'partner_id', 'date_order', 'amount_total', 'state'],
           limit,
+          offset,
           order: 'date_order desc',
         });
         return saleOrders;
@@ -302,6 +304,26 @@ class OdooClient {
         return [];
       }
     }
+  }
+
+  // Obtiene TODAS las órdenes paginando automáticamente (sin límite de 100)
+  async getAllOrders(filters: any[] = []): Promise<any[]> {
+    const PAGE_SIZE = 200;
+    let offset = 0;
+    let allOrders: any[] = [];
+
+    while (true) {
+      const batch = await this.getOrders(filters, PAGE_SIZE, offset);
+      allOrders = allOrders.concat(batch);
+
+      if (batch.length < PAGE_SIZE) {
+        break;
+      }
+      offset += PAGE_SIZE;
+    }
+
+    console.log(`🛒 getAllOrders: ${allOrders.length} órdenes obtenidas`);
+    return allOrders;
   }
 
   // ========== ÓRDENES DE COMPRA ==========
@@ -511,6 +533,26 @@ class OdooClient {
       ...extraFilters,
     ];
     return this.executeKw('sale.order', 'search_count', [baseFilters]);
+  }
+
+  // Obtiene TODOS los pedidos ecommerce paginando automáticamente
+  async getAllEcommerceOrders(extraFilters: any[] = []): Promise<OdooEcommerceOrder[]> {
+    const PAGE_SIZE = 200;
+    let offset = 0;
+    let allOrders: OdooEcommerceOrder[] = [];
+
+    while (true) {
+      const batch = await this.getEcommerceOrders(extraFilters, PAGE_SIZE, offset);
+      allOrders = allOrders.concat(batch);
+
+      if (batch.length < PAGE_SIZE) {
+        break;
+      }
+      offset += PAGE_SIZE;
+    }
+
+    console.log(`🌐 getAllEcommerceOrders: ${allOrders.length} órdenes obtenidas`);
+    return allOrders;
   }
 
   /**
