@@ -278,54 +278,6 @@ class OdooClient {
     });
   }
 
-  // Método genérico para obtener órdenes (intenta POS primero, luego Sales)
-  async getOrders(filters: any[] = [], limit: number = 100, offset: number = 0): Promise<any[]> {
-    try {
-      // Intentar primero con POS orders
-      const posOrders = await this.executeKw('pos.order', 'search_read', [filters], {
-        fields: ['id', 'name', 'partner_id', 'date_order', 'amount_total', 'state'],
-        limit,
-        offset,
-        order: 'date_order desc',
-      });
-      return posOrders;
-    } catch (posError) {
-      // Si falla POS, intentar con Sale Orders
-      try {
-        const saleOrders = await this.executeKw('sale.order', 'search_read', [filters], {
-          fields: ['id', 'name', 'partner_id', 'date_order', 'amount_total', 'state'],
-          limit,
-          offset,
-          order: 'date_order desc',
-        });
-        return saleOrders;
-      } catch (saleError) {
-        console.error('Error getting orders from both POS and Sales:', { posError, saleError });
-        return [];
-      }
-    }
-  }
-
-  // Obtiene TODAS las órdenes paginando automáticamente (sin límite de 100)
-  async getAllOrders(filters: any[] = []): Promise<any[]> {
-    const PAGE_SIZE = 200;
-    let offset = 0;
-    let allOrders: any[] = [];
-
-    while (true) {
-      const batch = await this.getOrders(filters, PAGE_SIZE, offset);
-      allOrders = allOrders.concat(batch);
-
-      if (batch.length < PAGE_SIZE) {
-        break;
-      }
-      offset += PAGE_SIZE;
-    }
-
-    console.log(`🛒 getAllOrders: ${allOrders.length} órdenes obtenidas`);
-    return allOrders;
-  }
-
   // ========== ÓRDENES DE COMPRA ==========
   async getPurchaseOrders(filters: any[] = [], limit: number = 100): Promise<OdooPurchaseOrder[]> {
     return this.executeKw('purchase.order', 'search_read', [filters], {
@@ -445,56 +397,40 @@ class OdooClient {
   }
 
   async getTopSellingProducts(days: number = 30, limit: number = 10): Promise<any[]> {
-    try {
-      const date = new Date();
-      date.setDate(date.getDate() - days);
-      const dateStr = date.toISOString().split('T')[0];
+    const date = new Date();
+    date.setDate(date.getDate() - days);
+    const dateStr = date.toISOString().split('T')[0];
 
-      let orderLines;
-      try {
-        orderLines = await this.executeKw('pos.order.line', 'search_read', [
-          [['order_id.date_order', '>=', dateStr], ['order_id.state', 'in', ['paid', 'done', 'invoiced']]],
-        ], {
-          fields: ['product_id', 'qty'],
-        });
-      } catch (posError) {
-        console.log('POS module not found, trying Sale Orders...');
-        orderLines = await this.executeKw('sale.order.line', 'search_read', [
-          [['order_id.date_order', '>=', dateStr], ['order_id.state', 'in', ['sale', 'done']]],
-        ], {
-          fields: ['product_id', 'product_uom_qty'],
-        });
-      }
+    const orderLines = await this.executeKw('pos.order.line', 'search_read', [
+      [['order_id.date_order', '>=', dateStr], ['order_id.state', 'in', ['paid', 'done', 'invoiced']]],
+    ], {
+      fields: ['product_id', 'qty'],
+    });
 
-      if (!orderLines || orderLines.length === 0) {
-        console.log('No order lines found');
-        return [];
-      }
-
-      const productSales: { [key: number]: { id: number; name: string; totalQty: number } } = {};
-
-      for (const line of orderLines) {
-        const productId = line.product_id[0];
-        const productName = line.product_id[1];
-        const quantity = line.qty || line.product_uom_qty || 0;
-
-        if (!productSales[productId]) {
-          productSales[productId] = {
-            id: productId,
-            name: productName,
-            totalQty: 0,
-          };
-        }
-        productSales[productId].totalQty += quantity;
-      }
-
-      return Object.values(productSales)
-        .sort((a, b) => b.totalQty - a.totalQty)
-        .slice(0, limit);
-    } catch (error: any) {
-      console.error('Error getting top selling products:', error?.message || error);
+    if (!orderLines || orderLines.length === 0) {
       return [];
     }
+
+    const productSales: { [key: number]: { id: number; name: string; totalQty: number } } = {};
+
+    for (const line of orderLines) {
+      const productId = line.product_id[0];
+      const productName = line.product_id[1];
+      const quantity = line.qty || 0;
+
+      if (!productSales[productId]) {
+        productSales[productId] = {
+          id: productId,
+          name: productName,
+          totalQty: 0,
+        };
+      }
+      productSales[productId].totalQty += quantity;
+    }
+
+    return Object.values(productSales)
+      .sort((a, b) => b.totalQty - a.totalQty)
+      .slice(0, limit);
   }
 
   // ========== PEDIDOS WEB / ECOMMERCE ==========
@@ -584,6 +520,101 @@ class OdooClient {
         'price_unit', 'price_subtotal',
       ],
     });
+  }
+
+  // ========== AGREGACIÓN (read_group) ==========
+
+  /**
+   * Ejecuta read_group en un modelo de Odoo (equivalente a SELECT ... GROUP BY en SQL).
+   * Retorna datos agregados sin traer registros individuales.
+   */
+  async readGroup(
+    model: string,
+    filters: any[],
+    fields: string[],
+    groupby: string[],
+    kwargs?: { lazy?: boolean; orderby?: string }
+  ): Promise<any[]> {
+    return this.executeKw(model, 'read_group', [filters], {
+      fields,
+      groupby,
+      lazy: kwargs?.lazy ?? false,
+      ...(kwargs?.orderby ? { orderby: kwargs.orderby } : {}),
+    });
+  }
+
+  /**
+   * Obtiene estadísticas de POS orders agrupadas por día.
+   * Retorna [{date, count, revenue}] usando read_group (sin traer registros individuales).
+   */
+  async getPosOrderStats(
+    filters: any[]
+  ): Promise<Array<{ date: string; count: number; revenue: number }>> {
+    const result = await this.readGroup(
+      'pos.order',
+      filters,
+      ['amount_total', 'date_order'],
+      ['date_order:day'],
+    );
+
+    return result.map((row: any) => ({
+      date: row['date_order:day'] || '',
+      count: row.__count || row.date_order_count || 0,
+      revenue: row.amount_total || 0,
+    }));
+  }
+
+  /**
+   * Obtiene estadísticas de ecommerce orders agrupadas por día.
+   * Retorna [{date, count, revenue}] usando read_group (sin traer registros individuales).
+   */
+  async getEcommerceOrderStats(
+    filters: any[]
+  ): Promise<Array<{ date: string; count: number; revenue: number }>> {
+    try {
+      const result = await this.readGroup(
+        'sale.order',
+        [['website_id', '!=', false], ...filters],
+        ['amount_total', 'date_order'],
+        ['date_order:day'],
+      );
+
+      return result.map((row: any) => ({
+        date: row['date_order:day'] || '',
+        count: row.__count || row.date_order_count || 0,
+        revenue: row.amount_total || 0,
+      }));
+    } catch (error: any) {
+      console.error('Error getting ecommerce order stats:', error?.message || error);
+      return [];
+    }
+  }
+
+  /**
+   * Obtiene todos los productos con campos mínimos para cálculos de inventario.
+   * Solo trae: id, name, list_price, qty_available (elimina categ_id, barcode, etc.)
+   */
+  async getProductsForInventory(filters: any[] = []): Promise<any[]> {
+    const PAGE_SIZE = 200;
+    let offset = 0;
+    let allProducts: any[] = [];
+
+    while (true) {
+      const batch = await this.executeKw('product.product', 'search_read', [filters], {
+        fields: ['id', 'name', 'list_price', 'qty_available'],
+        limit: PAGE_SIZE,
+        offset,
+      });
+      allProducts = allProducts.concat(batch);
+
+      if (batch.length < PAGE_SIZE) {
+        break;
+      }
+      offset += PAGE_SIZE;
+    }
+
+    console.log(`📦 getProductsForInventory: ${allProducts.length} productos (campos mínimos)`);
+    return allProducts;
   }
 
   // ========== PROVEEDORES ==========

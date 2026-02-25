@@ -93,8 +93,42 @@ export async function POST(req: NextRequest) {
 }
 
 /**
+ * Helper: suma count y revenue de un array de stats por día.
+ */
+function sumStats(stats: Array<{ date: string; count: number; revenue: number }>) {
+  return stats.reduce(
+    (acc, row) => ({ count: acc.count + row.count, revenue: acc.revenue + row.revenue }),
+    { count: 0, revenue: 0 }
+  );
+}
+
+/**
+ * Helper: filtra stats que correspondan al día de hoy en Argentina.
+ * Odoo read_group devuelve dates como "24 Feb 2026", "25 Feb 2026", etc.
+ * Comparamos contra la fecha argentina formateada.
+ */
+function filterTodayStats(
+  stats: Array<{ date: string; count: number; revenue: number }>,
+  todayArg: Date
+) {
+  // Formatear la fecha de hoy en Argentina al formato que usa Odoo: "DD MMM YYYY"
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const day = String(todayArg.getUTCDate()).padStart(2, '0');
+  const month = months[todayArg.getUTCMonth()];
+  const year = todayArg.getUTCFullYear();
+  const todayStr = `${day} ${month} ${year}`;
+
+  return stats.filter((row) => row.date === todayStr);
+}
+
+/**
  * Genera todos los datos del dashboard consultando Odoo.
- * Usa getAllProducts para paginar y obtener los 900+ productos.
+ *
+ * Optimizaciones aplicadas:
+ * 1. read_group: usa agregación server-side en vez de traer registros individuales
+ * 2. Campos mínimos: getProductsForInventory solo trae id, name, list_price, qty_available
+ * 3. Sin redundancia: "hoy" se deriva de los datos del mes (read_group por día)
+ * 4. Cache lastMonth: si ya se calculó el mes anterior, no se vuelve a consultar
  */
 async function generateDashboardData() {
   const odoo = getOdooClient();
@@ -130,69 +164,100 @@ async function generateDashboardData() {
 
   const confirmedStates = ['sale', 'done', 'paid', 'invoiced'];
 
-  // Ejecutar consultas en paralelo (POS + Ecommerce + Inventario)
-  const [
-    lowStockProducts,
-    topSellingProducts,
-    expiringProducts,
-    allProducts,
-    todayOrders,
-    monthOrders,
-    lastMonthOrders,
-    ecommerceTodayOrders,
-    ecommerceMonthOrders,
-    ecommerceLastMonthOrders,
-  ] = await Promise.all([
-    odoo.getLowStockProducts(10),
-    odoo.getTopSellingProducts(30, 5),
-    odoo.getExpiringProducts(30, 10),
-    odoo.getAllProducts([]),
-    // POS orders (paginado para traer todas)
-    odoo.getAllOrders([
-      ['date_order', '>=', startOfDay.toISOString()],
-      ['state', 'in', confirmedStates],
-    ]),
-    odoo.getAllOrders([
+  // --- Cache de lastMonth: verificar si ya lo tenemos guardado ---
+  const lastSnapshot = await DashboardSnapshot.findOne()
+    .sort({ generatedAt: -1 })
+    .lean();
+
+  const expectedLastMonthPeriod = `${startOfLastMonth.getUTCFullYear()}-${String(startOfLastMonth.getUTCMonth() + 1).padStart(2, '0')}`;
+  const hasLastMonthCache = lastSnapshot?.lastMonthPeriod === expectedLastMonthPeriod && lastSnapshot?.lastMonthData;
+
+  // --- Queries paralelas OPTIMIZADAS ---
+  // Base: 6 queries (inventario + read_group del mes)
+  // Sin cache lastMonth: +2 queries (read_group lastMonth)
+  const basePromises = [
+    odoo.getLowStockProducts(10),                       // 0: inventario
+    odoo.getTopSellingProducts(30, 5),                   // 1: top selling
+    odoo.getExpiringProducts(30, 10),                    // 2: expiring
+    odoo.getProductsForInventory([]),                     // 3: all products (campos mínimos)
+    odoo.getPosOrderStats([                               // 4: POS month (agrupado por día)
       ['date_order', '>=', startOfMonth.toISOString()],
       ['state', 'in', confirmedStates],
     ]),
-    odoo.getAllOrders([
-      ['date_order', '>=', startOfLastMonth.toISOString()],
-      ['date_order', '<=', endOfLastMonth.toISOString()],
-      ['state', 'in', confirmedStates],
-    ]),
-    // Ecommerce orders (paginado para traer todas)
-    odoo.getAllEcommerceOrders([
-      ['date_order', '>=', startOfDay.toISOString()],
-      ['state', 'in', confirmedStates],
-    ]),
-    odoo.getAllEcommerceOrders([
+    odoo.getEcommerceOrderStats([                         // 5: Ecom month (agrupado por día)
       ['date_order', '>=', startOfMonth.toISOString()],
       ['state', 'in', confirmedStates],
     ]),
-    odoo.getAllEcommerceOrders([
-      ['date_order', '>=', startOfLastMonth.toISOString()],
-      ['date_order', '<=', endOfLastMonth.toISOString()],
-      ['state', 'in', confirmedStates],
-    ]),
-  ]);
+  ];
 
-  // Calcular revenue por canal
-  const posRevenueToday = todayOrders.reduce((sum: number, order: any) => sum + (order.amount_total || 0), 0);
-  const posRevenueMonth = monthOrders.reduce((sum: number, order: any) => sum + (order.amount_total || 0), 0);
-  const posRevenueLastMonth = lastMonthOrders.reduce((sum: number, order: any) => sum + (order.amount_total || 0), 0);
+  // Solo consultar lastMonth si no está cacheado
+  if (!hasLastMonthCache) {
+    basePromises.push(
+      odoo.getPosOrderStats([                             // 6: POS lastMonth
+        ['date_order', '>=', startOfLastMonth.toISOString()],
+        ['date_order', '<=', endOfLastMonth.toISOString()],
+        ['state', 'in', confirmedStates],
+      ]),
+      odoo.getEcommerceOrderStats([                       // 7: Ecom lastMonth
+        ['date_order', '>=', startOfLastMonth.toISOString()],
+        ['date_order', '<=', endOfLastMonth.toISOString()],
+        ['state', 'in', confirmedStates],
+      ]),
+    );
+  }
 
-  const ecomRevenueToday = ecommerceTodayOrders.reduce((sum: number, order: any) => sum + (order.amount_total || 0), 0);
-  const ecomRevenueMonth = ecommerceMonthOrders.reduce((sum: number, order: any) => sum + (order.amount_total || 0), 0);
-  const ecomRevenueLastMonth = ecommerceLastMonthOrders.reduce((sum: number, order: any) => sum + (order.amount_total || 0), 0);
+  const results = await Promise.all(basePromises);
+
+  const lowStockProducts = results[0];
+  const topSellingProducts = results[1];
+  const expiringProducts = results[2];
+  const allProducts = results[3];
+  const posMonthStats = results[4] as Array<{ date: string; count: number; revenue: number }>;
+  const ecomMonthStats = results[5] as Array<{ date: string; count: number; revenue: number }>;
+
+  // --- Derivar "hoy" de los datos del mes (eliminar query redundante) ---
+  const posTodayStats = sumStats(filterTodayStats(posMonthStats, todayArg));
+  const posMonthTotals = sumStats(posMonthStats);
+  const ecomTodayStats = sumStats(filterTodayStats(ecomMonthStats, todayArg));
+  const ecomMonthTotals = sumStats(ecomMonthStats);
+
+  // --- LastMonth: usar cache o resultados frescos ---
+  let posLastMonthRevenue: number;
+  let posLastMonthCount: number;
+  let ecomLastMonthRevenue: number;
+  let ecomLastMonthCount: number;
+
+  if (hasLastMonthCache) {
+    // Reusar datos cacheados (el mes pasado ya cerró, no cambia)
+    posLastMonthRevenue = lastSnapshot!.lastMonthData!.posRevenue;
+    posLastMonthCount = lastSnapshot!.lastMonthData!.posCount;
+    ecomLastMonthRevenue = lastSnapshot!.lastMonthData!.ecomRevenue;
+    ecomLastMonthCount = lastSnapshot!.lastMonthData!.ecomCount;
+    console.log(`📋 lastMonth cacheado (${expectedLastMonthPeriod}), no se consultó Odoo`);
+  } else {
+    const posLastMonthStats = results[6] as Array<{ date: string; count: number; revenue: number }>;
+    const ecomLastMonthStats = results[7] as Array<{ date: string; count: number; revenue: number }>;
+    const posLM = sumStats(posLastMonthStats);
+    const ecomLM = sumStats(ecomLastMonthStats);
+    posLastMonthRevenue = posLM.revenue;
+    posLastMonthCount = posLM.count;
+    ecomLastMonthRevenue = ecomLM.revenue;
+    ecomLastMonthCount = ecomLM.count;
+    console.log(`🔄 lastMonth calculado desde Odoo (${expectedLastMonthPeriod})`);
+  }
 
   // Totales combinados
+  const posRevenueToday = posTodayStats.revenue;
+  const posRevenueMonth = posMonthTotals.revenue;
+  const ecomRevenueToday = ecomTodayStats.revenue;
+  const ecomRevenueMonth = ecomMonthTotals.revenue;
+
   const todayRevenue = posRevenueToday + ecomRevenueToday;
   const monthRevenue = posRevenueMonth + ecomRevenueMonth;
-  const lastMonthRevenue = posRevenueLastMonth + ecomRevenueLastMonth;
+  const lastMonthRevenue = posLastMonthRevenue + ecomLastMonthRevenue;
 
-  const totalOrdersToday = todayOrders.length + ecommerceTodayOrders.length;
-  const totalOrdersMonth = monthOrders.length + ecommerceMonthOrders.length;
+  const totalOrdersToday = posTodayStats.count + ecomTodayStats.count;
+  const totalOrdersMonth = posMonthTotals.count + ecomMonthTotals.count;
 
   const growthPercentage = lastMonthRevenue > 0
     ? ((monthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100
@@ -204,12 +269,13 @@ async function generateDashboardData() {
 
   // Debug
   console.log('🔍 Dashboard debug:', {
-    pos: { today: todayOrders.length, month: monthOrders.length },
-    ecommerce: { today: ecommerceTodayOrders.length, month: ecommerceMonthOrders.length },
+    pos: { today: posTodayStats.count, month: posMonthTotals.count },
+    ecommerce: { today: ecomTodayStats.count, month: ecomMonthTotals.count },
     revenue: { posToday: posRevenueToday, ecomToday: ecomRevenueToday, total: todayRevenue },
+    queries: hasLastMonthCache ? '6 RPC calls (lastMonth cacheado)' : '8 RPC calls',
   });
 
-  // Métricas de inventario (ahora con TODOS los productos)
+  // Métricas de inventario (campos mínimos: id, name, list_price, qty_available)
   const outOfStockCount = allProducts.filter((p: any) => p.qty_available <= 0).length;
   const totalInventoryValue = allProducts.reduce(
     (sum: number, p: any) => sum + (p.list_price * Math.max(0, p.qty_available)),
@@ -237,14 +303,14 @@ async function generateDashboardData() {
       today: totalOrdersToday,
       month: totalOrdersMonth,
       pos: {
-        today: todayOrders.length,
-        month: monthOrders.length,
+        today: posTodayStats.count,
+        month: posMonthTotals.count,
         revenueToday: posRevenueToday,
         revenueMonth: posRevenueMonth,
       },
       ecommerce: {
-        today: ecommerceTodayOrders.length,
-        month: ecommerceMonthOrders.length,
+        today: ecomTodayStats.count,
+        month: ecomMonthTotals.count,
         revenueToday: ecomRevenueToday,
         revenueMonth: ecomRevenueMonth,
       },
@@ -261,6 +327,14 @@ async function generateDashboardData() {
       lowStock: lowStockProducts.slice(0, 5),
       slowMoving: slowMovingProducts,
       expiring: expiringProducts,
+    },
+    // Metadata para cache de lastMonth
+    lastMonthPeriod: expectedLastMonthPeriod,
+    lastMonthData: {
+      posRevenue: posLastMonthRevenue,
+      posCount: posLastMonthCount,
+      ecomRevenue: ecomLastMonthRevenue,
+      ecomCount: ecomLastMonthCount,
     },
   };
 }
