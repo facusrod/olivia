@@ -44,13 +44,6 @@ export interface IDashboardSnapshot extends Document {
       daysUntilExpiration: number;
     }>;
   };
-  lastMonthPeriod?: string; // "YYYY-MM" del mes anterior cacheado (ej: "2026-01")
-  lastMonthData?: {
-    posRevenue: number;
-    posCount: number;
-    ecomRevenue: number;
-    ecomCount: number;
-  };
   generatedAt: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -93,13 +86,6 @@ const DashboardSnapshotSchema = new Schema<IDashboardSnapshot>(
       lowStock: { type: Schema.Types.Mixed, default: [] },
       slowMoving: { type: Schema.Types.Mixed, default: [] },
       expiring: { type: Schema.Types.Mixed, default: [] },
-    },
-    lastMonthPeriod: { type: String },
-    lastMonthData: {
-      posRevenue: { type: Number, default: 0 },
-      posCount: { type: Number, default: 0 },
-      ecomRevenue: { type: Number, default: 0 },
-      ecomCount: { type: Number, default: 0 },
     },
     generatedAt: { type: Date, required: true },
   },
