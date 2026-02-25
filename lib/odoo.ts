@@ -33,24 +33,6 @@ interface OdooProductLot {
   removal_date?: string;
 }
 
-interface OdooSaleOrder {
-  id: number;
-  name: string;
-  partner_id: [number, string];
-  date_order: string;
-  amount_total: number;
-  state: string;
-}
-
-interface OdooPurchaseOrder {
-  id: number;
-  name: string;
-  partner_id: [number, string];
-  date_order: string;
-  amount_total: number;
-  state: string;
-}
-
 interface OdooEcommerceOrder {
   id: number;
   name: string;
@@ -196,119 +178,6 @@ class OdooClient {
       ['default_code', 'ilike', query],
     ];
     return this.getProducts(filters, limit, offset);
-  }
-
-  async getProductsByCategory(categoryName: string): Promise<OdooProduct[]> {
-    // Primero buscar la categoría
-    const categories = await this.executeKw('product.category', 'search_read', [
-      [['name', 'ilike', categoryName]],
-    ], { fields: ['id', 'name'], limit: 1 });
-
-    if (categories.length === 0) return [];
-
-    // Luego buscar productos de esa categoría
-    return this.getProducts([['categ_id', '=', categories[0].id]]);
-  }
-
-  async getProductById(id: number): Promise<OdooProduct | null> {
-    const products = await this.executeKw('product.product', 'search_read', [
-      [['id', '=', id]],
-    ], {
-      fields: [
-        'id',
-        'name',
-        'list_price',
-        'qty_available',
-        'categ_id',
-        'default_code',
-        'barcode',
-        'description_sale',
-      ],
-      limit: 1,
-    });
-    return products.length > 0 ? products[0] : null;
-  }
-
-  /**
-   * Obtiene TODOS los productos paginando automáticamente.
-   * Odoo limita las respuestas, así que hacemos múltiples llamadas.
-   */
-  async getAllProducts(filters: any[] = []): Promise<OdooProduct[]> {
-    const PAGE_SIZE = 200;
-    let offset = 0;
-    let allProducts: OdooProduct[] = [];
-
-    while (true) {
-      const batch = await this.getProducts(filters, PAGE_SIZE, offset);
-      allProducts = allProducts.concat(batch);
-
-      if (batch.length < PAGE_SIZE) {
-        // Ya no hay más páginas
-        break;
-      }
-      offset += PAGE_SIZE;
-    }
-
-    console.log(`📦 getAllProducts: ${allProducts.length} productos obtenidos (${Math.ceil(offset / PAGE_SIZE) + 1} páginas)`);
-    return allProducts;
-  }
-
-  // ========== ÓRDENES DE VENTA ==========
-  async getSaleOrders(filters: any[] = [], limit: number = 100): Promise<OdooSaleOrder[]> {
-    return this.executeKw('sale.order', 'search_read', [filters], {
-      fields: ['id', 'name', 'partner_id', 'date_order', 'amount_total', 'state'],
-      limit,
-      order: 'date_order desc',
-    });
-  }
-
-  async getRecentSales(days: number = 30): Promise<OdooSaleOrder[]> {
-    const date = new Date();
-    date.setDate(date.getDate() - days);
-    const dateStr = date.toISOString().split('T')[0];
-
-    return this.getSaleOrders([['date_order', '>=', dateStr]]);
-  }
-
-  async getSaleOrderLines(orderId: number): Promise<any[]> {
-    return this.executeKw('sale.order.line', 'search_read', [
-      [['order_id', '=', orderId]],
-    ], {
-      fields: ['product_id', 'product_uom_qty', 'price_unit', 'price_subtotal'],
-    });
-  }
-
-  // ========== ÓRDENES DE COMPRA ==========
-  async getPurchaseOrders(filters: any[] = [], limit: number = 100): Promise<OdooPurchaseOrder[]> {
-    return this.executeKw('purchase.order', 'search_read', [filters], {
-      fields: ['id', 'name', 'partner_id', 'date_order', 'amount_total', 'state'],
-      limit,
-      order: 'date_order desc',
-    });
-  }
-
-  async createPurchaseOrder(data: {
-    partnerId: number;
-    lines: Array<{ productId: number; quantity: number; price: number }>;
-  }): Promise<number> {
-    const orderLines = data.lines.map((line) => [
-      0,
-      0,
-      {
-        product_id: line.productId,
-        product_qty: line.quantity,
-        price_unit: line.price,
-      },
-    ]);
-
-    const orderId = await this.executeKw('purchase.order', 'create', [
-      {
-        partner_id: data.partnerId,
-        order_line: orderLines,
-      },
-    ]);
-
-    return orderId;
   }
 
   // ========== ANÁLISIS Y SUGERENCIAS ==========
@@ -461,37 +330,6 @@ class OdooClient {
   }
 
   /**
-   * Cuenta pedidos ecommerce (para paginación eficiente).
-   */
-  async countEcommerceOrders(extraFilters: any[] = []): Promise<number> {
-    const baseFilters = [
-      ['website_id', '!=', false],
-      ...extraFilters,
-    ];
-    return this.executeKw('sale.order', 'search_count', [baseFilters]);
-  }
-
-  // Obtiene TODOS los pedidos ecommerce paginando automáticamente
-  async getAllEcommerceOrders(extraFilters: any[] = []): Promise<OdooEcommerceOrder[]> {
-    const PAGE_SIZE = 200;
-    let offset = 0;
-    let allOrders: OdooEcommerceOrder[] = [];
-
-    while (true) {
-      const batch = await this.getEcommerceOrders(extraFilters, PAGE_SIZE, offset);
-      allOrders = allOrders.concat(batch);
-
-      if (batch.length < PAGE_SIZE) {
-        break;
-      }
-      offset += PAGE_SIZE;
-    }
-
-    console.log(`🌐 getAllEcommerceOrders: ${allOrders.length} órdenes obtenidas`);
-    return allOrders;
-  }
-
-  /**
    * Obtiene un pedido ecommerce por ID.
    */
   async getEcommerceOrderById(id: number): Promise<OdooEcommerceOrder | null> {
@@ -616,16 +454,6 @@ class OdooClient {
     console.log(`📦 getProductsForInventory: ${allProducts.length} productos (campos mínimos)`);
     return allProducts;
   }
-
-  // ========== PROVEEDORES ==========
-  async getSuppliers(limit: number = 100): Promise<any[]> {
-    return this.executeKw('res.partner', 'search_read', [
-      [['supplier_rank', '>', 0]],
-    ], {
-      fields: ['id', 'name', 'email', 'phone'],
-      limit,
-    });
-  }
 }
 
 // Singleton instance
@@ -638,4 +466,4 @@ export function getOdooClient(): OdooClient {
   return odooClient;
 }
 
-export type { OdooProduct, OdooSaleOrder, OdooPurchaseOrder, OdooProductLot, OdooEcommerceOrder, OdooEcommerceOrderLine };
+export type { OdooProduct, OdooProductLot, OdooEcommerceOrder, OdooEcommerceOrderLine };
