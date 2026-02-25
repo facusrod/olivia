@@ -382,49 +382,47 @@ class OdooClient {
   }
 
   /**
-   * Obtiene estadísticas de POS orders agrupadas por día.
-   * Retorna [{date, count, revenue}] usando read_group (sin traer registros individuales).
+   * Obtiene totales de POS orders (count + revenue) usando read_group sin groupby.
+   * Retorna una sola fila agregada. Independiente del locale de Odoo.
    */
   async getPosOrderStats(
     filters: any[]
-  ): Promise<Array<{ date: string; count: number; revenue: number }>> {
+  ): Promise<{ count: number; revenue: number }> {
     const result = await this.readGroup(
       'pos.order',
       filters,
-      ['amount_total', 'date_order'],
-      ['date_order:day'],
+      ['amount_total'],
+      [], // sin groupby = 1 fila con totales
     );
-
-    return result.map((row: any) => ({
-      date: row['date_order:day'] || '',
-      count: row.__count || row.date_order_count || 0,
+    const row = result[0] || {};
+    return {
+      count: row.__count || 0,
       revenue: row.amount_total || 0,
-    }));
+    };
   }
 
   /**
-   * Obtiene estadísticas de ecommerce orders agrupadas por día.
-   * Retorna [{date, count, revenue}] usando read_group (sin traer registros individuales).
+   * Obtiene totales de ecommerce orders (count + revenue) usando read_group sin groupby.
+   * Retorna una sola fila agregada. Independiente del locale de Odoo.
    */
   async getEcommerceOrderStats(
     filters: any[]
-  ): Promise<Array<{ date: string; count: number; revenue: number }>> {
+  ): Promise<{ count: number; revenue: number }> {
     try {
       const result = await this.readGroup(
         'sale.order',
         [['website_id', '!=', false], ...filters],
-        ['amount_total', 'date_order'],
-        ['date_order:day'],
+        ['amount_total'],
+        [], // sin groupby = 1 fila con totales
       );
-
-      return result.map((row: any) => ({
-        date: row['date_order:day'] || '',
-        count: row.__count || row.date_order_count || 0,
+      const row = result[0] || {};
+      return {
+        count: row.__count || 0,
         revenue: row.amount_total || 0,
-      }));
+      };
     } catch (error: any) {
       console.error('Error getting ecommerce order stats:', error?.message || error);
-      return [];
+      return { count: 0, revenue: 0 };
     }
   }
 
