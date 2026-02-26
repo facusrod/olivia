@@ -4,6 +4,18 @@ import { authOptions } from '@/lib/auth-options';
 import { getOdooClient } from '@/lib/odoo';
 import connectDB from '@/lib/mongodb';
 import DashboardSnapshot from '@/models/DashboardSnapshot';
+import pLimit from 'p-limit';
+
+/**
+ * Helper: wrappea una promesa para medir y loguear su tiempo de ejecución.
+ */
+function timed<T>(label: string, promise: Promise<T>): Promise<T> {
+  const start = Date.now();
+  return promise.then(
+    (result) => { console.log(`⏱️ ${label}: ${Date.now() - start}ms`); return result; },
+    (error) => { console.log(`⏱️ ${label}: ${Date.now() - start}ms (ERROR)`); throw error; }
+  );
+}
 
 /**
  * GET - Devuelve el último snapshot guardado.
@@ -101,7 +113,11 @@ export async function POST(req: NextRequest) {
  * 3. read_group sin groupby: cada query devuelve 1 fila con totales (independiente del locale)
  */
 async function generateDashboardData() {
+  const totalStart = Date.now();
   const odoo = getOdooClient();
+
+  // Limitar concurrencia para no saturar workers de Odoo
+  const limit = pLimit(3);
 
   // Argentina = UTC-3. Todas las fechas se calculan en hora Argentina
   // para que "hoy" y "este mes" coincidan con el horario del negocio.
@@ -134,9 +150,9 @@ async function generateDashboardData() {
 
   const confirmedStates = ['sale', 'done', 'paid', 'invoiced'];
 
-  // --- Queries paralelas OPTIMIZADAS ---
-  // 10 queries livianas: 4 inventario + 6 read_group (today/month/lastMonth × POS/ecom)
-  // Cada read_group devuelve 1 fila con totales (sin groupby, independiente del locale)
+  // --- Queries paralelas con p-limit(3) ---
+  // Máximo 3 queries simultáneas para no saturar workers de Odoo.
+  // Cada query tiene timing log para diagnosticar cuellos de botella.
   const [
     lowStockProducts,
     topSellingProducts,
@@ -149,36 +165,36 @@ async function generateDashboardData() {
     posLastMonth,
     ecomLastMonth,
   ] = await Promise.all([
-    odoo.getLowStockProducts(10),
-    odoo.getTopSellingProducts(30, 5),
-    odoo.getExpiringProducts(30, 10),
-    odoo.getProductsForInventory([]),
-    odoo.getPosOrderStats([
+    limit(() => timed('getLowStockProducts', odoo.getLowStockProducts(10))),
+    limit(() => timed('getTopSellingProducts', odoo.getTopSellingProducts(30, 5))),
+    limit(() => timed('getExpiringProducts', odoo.getExpiringProducts(30, 10))),
+    limit(() => timed('getProductsForInventory', odoo.getProductsForInventory([]))),
+    limit(() => timed('posToday', odoo.getPosOrderStats([
       ['date_order', '>=', startOfDay.toISOString()],
       ['state', 'in', confirmedStates],
-    ]),
-    odoo.getEcommerceOrderStats([
+    ]))),
+    limit(() => timed('ecomToday', odoo.getEcommerceOrderStats([
       ['date_order', '>=', startOfDay.toISOString()],
       ['state', 'in', confirmedStates],
-    ]),
-    odoo.getPosOrderStats([
+    ]))),
+    limit(() => timed('posMonth', odoo.getPosOrderStats([
       ['date_order', '>=', startOfMonth.toISOString()],
       ['state', 'in', confirmedStates],
-    ]),
-    odoo.getEcommerceOrderStats([
+    ]))),
+    limit(() => timed('ecomMonth', odoo.getEcommerceOrderStats([
       ['date_order', '>=', startOfMonth.toISOString()],
       ['state', 'in', confirmedStates],
-    ]),
-    odoo.getPosOrderStats([
+    ]))),
+    limit(() => timed('posLastMonth', odoo.getPosOrderStats([
       ['date_order', '>=', startOfLastMonth.toISOString()],
       ['date_order', '<=', endOfLastMonth.toISOString()],
       ['state', 'in', confirmedStates],
-    ]),
-    odoo.getEcommerceOrderStats([
+    ]))),
+    limit(() => timed('ecomLastMonth', odoo.getEcommerceOrderStats([
       ['date_order', '>=', startOfLastMonth.toISOString()],
       ['date_order', '<=', endOfLastMonth.toISOString()],
       ['state', 'in', confirmedStates],
-    ]),
+    ]))),
   ]);
 
   // Totales combinados (lectura directa, sin parsing de fechas)
@@ -219,6 +235,7 @@ async function generateDashboardData() {
     .slice(0, 5);
 
   console.log(`📊 Dashboard generado: ${allProducts.length} productos, valor total: ${totalInventoryValue}`);
+  console.log(`⏱️ TOTAL generateDashboardData: ${Date.now() - totalStart}ms`);
 
   return {
     sales: {
