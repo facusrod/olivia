@@ -8,7 +8,6 @@ import {
   TrendingDown,
   Package,
   ShoppingCart,
-  AlertTriangle,
   Loader2,
   MessageSquare,
   Sparkles,
@@ -17,9 +16,7 @@ import {
   BarChart3,
   ArrowUpRight,
   ArrowDownRight,
-  Clock,
   CalendarClock,
-  RefreshCw,
   ClipboardList,
   Store,
   Globe,
@@ -135,6 +132,43 @@ export default function DashboardPage() {
     return new Intl.NumberFormat('es-ES').format(value);
   };
 
+  const getUpdateStatus = (updatedAt: string) => {
+    const now = new Date();
+    const updated = new Date(updatedAt);
+    const diffMs = now.getTime() - updated.getTime();
+    const diffMin = Math.floor(diffMs / 60000);
+
+    let dotClass: string;
+    if (diffMin < 15) {
+      dotClass = 'bg-green-500';
+    } else if (diffMin < 30) {
+      dotClass = 'bg-yellow-500';
+    } else {
+      dotClass = 'bg-red-500';
+    }
+
+    let text: string;
+    if (diffMin < 1) {
+      text = 'Justo ahora';
+    } else if (diffMin < 60) {
+      text = `hace ${diffMin} min`;
+    } else {
+      const hours = Math.floor(diffMin / 60);
+      text = `hace ${hours}h ${diffMin % 60}min`;
+    }
+
+    const dateShort = updated.toLocaleDateString('es-ES', {
+      day: 'numeric',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    return { dotClass, text, dateShort };
+  };
+
+  const status = getUpdateStatus(data.updatedAt);
+
   return (
     <div className="p-4 md:p-6 space-y-4 md:space-y-6">
       {/* Header */}
@@ -145,36 +179,35 @@ export default function DashboardPage() {
             Vista general de tu negocio
           </p>
         </div>
-        <div className="flex items-center gap-3 sm:gap-4">
-          <div className="hidden sm:flex items-center gap-2 text-sm text-gray-500">
-            <Clock className="w-4 h-4" />
-            Actualizado: {new Date(data.updatedAt).toLocaleString('es-ES')}
-          </div>
-          <button
-            onClick={refreshDashboard}
-            disabled={refreshing}
-            className="flex items-center gap-2 px-3 md:px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 transition-colors text-sm font-semibold"
-          >
-            {refreshing ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span className="hidden sm:inline">Actualizando...</span>
-              </>
-            ) : (
-              <>
-                <RefreshCw className="w-4 h-4" />
-                <span className="hidden sm:inline">Actualizar</span>
-              </>
-            )}
-          </button>
-        </div>
+        <button
+          onClick={refreshDashboard}
+          disabled={refreshing}
+          className="hidden sm:flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 transition-colors disabled:opacity-50"
+        >
+          {refreshing ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          ) : (
+            <div className={`w-2 h-2 rounded-full ${status.dotClass}`} />
+          )}
+          <span>{status.text}</span>
+          <span className="text-gray-400">· {status.dateShort}</span>
+        </button>
       </div>
 
       {/* Mobile: last update */}
-      <div className="sm:hidden flex items-center gap-2 text-xs text-gray-500">
-        <Clock className="w-3.5 h-3.5" />
-        Actualizado: {new Date(data.updatedAt).toLocaleString('es-ES')}
-      </div>
+      <button
+        onClick={refreshDashboard}
+        disabled={refreshing}
+        className="sm:hidden flex items-center gap-2 text-xs text-gray-500 hover:text-gray-700 transition-colors disabled:opacity-50"
+      >
+        {refreshing ? (
+          <Loader2 className="w-3 h-3 animate-spin" />
+        ) : (
+          <div className={`w-2 h-2 rounded-full ${status.dotClass}`} />
+        )}
+        <span>{status.text}</span>
+        <span className="text-gray-400">· {status.dateShort}</span>
+      </button>
 
       {/* Métricas Principales - Ventas */}
       <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
