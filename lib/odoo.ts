@@ -59,6 +59,7 @@ interface OdooEcommerceOrderLine {
 class OdooClient {
   private config: OdooConfig;
   private uid: number | null = null;
+  private authPromise: Promise<number> | null = null;
   private cfHeaders: Record<string, string> = {};
 
   constructor() {
@@ -110,6 +111,15 @@ class OdooClient {
   async authenticate(): Promise<number> {
     if (this.uid) return this.uid;
 
+    // Cachear la promesa para evitar autenticaciones duplicadas
+    // cuando múltiples queries llaman a authenticate() en paralelo
+    if (!this.authPromise) {
+      this.authPromise = this.doAuthenticate();
+    }
+    return this.authPromise;
+  }
+
+  private async doAuthenticate(): Promise<number> {
     try {
       const uid = await this.callXmlRpc('common', 'authenticate', [
         this.config.db,
@@ -126,6 +136,8 @@ class OdooClient {
       console.log('✅ Odoo authenticated, UID:', uid);
       return uid;
     } catch (error: any) {
+      // Limpiar promesa en caso de error para permitir reintentos
+      this.authPromise = null;
       throw new Error(`Odoo authentication failed: ${error?.message || error}`);
     }
   }
