@@ -109,7 +109,7 @@ export async function POST(req: NextRequest) {
  *
  * Optimizaciones aplicadas:
  * 1. read_group: usa agregación server-side en vez de traer registros individuales
- * 2. Campos mínimos: getProductsForInventory solo trae id, name, list_price, qty_available
+ * 2. getProductCount + getInventoryValue: reemplazan getProductsForInventory (6 RPC → 3 queries rápidas)
  * 3. read_group sin groupby: cada query devuelve 1 fila con totales (independiente del locale)
  */
 async function generateDashboardData() {
@@ -157,7 +157,9 @@ async function generateDashboardData() {
     lowStockProducts,
     topSellingProducts,
     expiringProducts,
-    allProducts,
+    totalProducts,
+    outOfStockCount,
+    inventoryValue,
     posToday,
     ecomToday,
     posMonth,
@@ -168,7 +170,9 @@ async function generateDashboardData() {
     limit(() => timed('getLowStockProducts', odoo.getLowStockProducts(10))),
     limit(() => timed('getTopSellingProducts', odoo.getTopSellingProducts(30, 5))),
     limit(() => timed('getExpiringProducts', odoo.getExpiringProducts(30, 10))),
-    limit(() => timed('getProductsForInventory', odoo.getProductsForInventory([]))),
+    limit(() => timed('totalProducts', odoo.getProductCount())),
+    limit(() => timed('outOfStock', odoo.getProductCount([['qty_available', '<=', 0]]))),
+    limit(() => timed('inventoryValue', odoo.getInventoryValue())),
     limit(() => timed('posToday', odoo.getPosOrderStats([
       ['date_order', '>=', startOfDay.toISOString()],
       ['state', 'in', confirmedStates],
@@ -220,21 +224,7 @@ async function generateDashboardData() {
     revenue: { posToday: posToday.revenue, ecomToday: ecomToday.revenue, total: todayRevenue },
   });
 
-  // Métricas de inventario (campos mínimos: id, name, list_price, qty_available)
-  const outOfStockCount = allProducts.filter((p: any) => p.qty_available <= 0).length;
-  const totalInventoryValue = allProducts.reduce(
-    (sum: number, p: any) => sum + (p.list_price * Math.max(0, p.qty_available)),
-    0
-  );
-
-  // Productos con menos movimiento
-  const topSellingIds = new Set(topSellingProducts.map((p: any) => p.id));
-  const slowMovingProducts = allProducts
-    .filter((p: any) => p.qty_available > 0 && !topSellingIds.has(p.id))
-    .sort((a: any, b: any) => b.qty_available - a.qty_available)
-    .slice(0, 5);
-
-  console.log(`📊 Dashboard generado: ${allProducts.length} productos, valor total: ${totalInventoryValue}`);
+  console.log(`📊 Dashboard generado: ${totalProducts} productos, valor total: ${inventoryValue}`);
   console.log(`⏱️ TOTAL generateDashboardData: ${Date.now() - totalStart}ms`);
 
   return {
@@ -264,14 +254,13 @@ async function generateDashboardData() {
     inventory: {
       lowStock: lowStockProducts.length,
       outOfStock: outOfStockCount,
-      totalValue: totalInventoryValue,
+      totalValue: inventoryValue,
       expiringSoon: expiringProducts.length,
-      totalProducts: allProducts.length,
+      totalProducts: totalProducts,
     },
     products: {
       topSelling: topSellingProducts,
       lowStock: lowStockProducts.slice(0, 5),
-      slowMoving: slowMovingProducts,
       expiring: expiringProducts,
     },
   };

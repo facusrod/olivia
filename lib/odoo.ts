@@ -427,30 +427,25 @@ class OdooClient {
   }
 
   /**
-   * Obtiene todos los productos con campos mínimos para cálculos de inventario.
-   * Solo trae: id, name, list_price, qty_available (elimina categ_id, barcode, etc.)
+   * Cuenta productos que cumplen los filtros usando read_group (1 RPC, 1 fila).
    */
-  async getProductsForInventory(filters: any[] = []): Promise<any[]> {
-    const PAGE_SIZE = 200;
-    let offset = 0;
-    let allProducts: any[] = [];
+  async getProductCount(filters: any[] = []): Promise<number> {
+    const result = await this.readGroup('product.product', filters, ['id'], []);
+    return result[0]?.__count || 0;
+  }
 
-    while (true) {
-      const batch = await this.executeKw('product.product', 'search_read', [filters], {
-        fields: ['id', 'name', 'list_price', 'qty_available'],
-        limit: PAGE_SIZE,
-        offset,
-      });
-      allProducts = allProducts.concat(batch);
-
-      if (batch.length < PAGE_SIZE) {
-        break;
-      }
-      offset += PAGE_SIZE;
-    }
-
-    console.log(`📦 getProductsForInventory: ${allProducts.length} productos (campos mínimos)`);
-    return allProducts;
+  /**
+   * Calcula el valor total de inventario (list_price × qty_available) en una sola llamada.
+   * Solo trae productos con stock > 0 y únicamente 2 campos.
+   */
+  async getInventoryValue(): Promise<number> {
+    const products = await this.executeKw('product.product', 'search_read', [[['qty_available', '>', 0]]], {
+      fields: ['list_price', 'qty_available'],
+    });
+    return products.reduce(
+      (sum: number, p: any) => sum + (p.list_price * p.qty_available),
+      0
+    );
   }
 }
 
