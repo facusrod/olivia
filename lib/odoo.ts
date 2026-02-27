@@ -440,19 +440,22 @@ class OdooClient {
 
   /**
    * Obtiene productos con stock alto que no están en la lista de más vendidos.
-   * Una sola llamada search_read con filtros y limit (no trae todos los productos).
+   * qty_available es un campo calculado en Odoo (no stored), así que no se puede
+   * usar en ORDER BY. Se trae todo y se ordena en memoria.
    */
   async getSlowMovingProducts(
     excludeIds: number[],
-    limit: number = 5
+    topN: number = 5
   ): Promise<any[]> {
-    return this.executeKw('product.product', 'search_read', [
+    const products = await this.executeKw('product.product', 'search_read', [
       [['qty_available', '>', 0], ['id', 'not in', excludeIds]],
     ], {
       fields: ['id', 'name', 'qty_available'],
-      order: 'qty_available desc',
-      limit,
+      order: 'id asc', // Forzar orden por campo stored (qty_available es computed, no se puede usar en ORDER BY)
     });
+    return products
+      .sort((a: any, b: any) => b.qty_available - a.qty_available)
+      .slice(0, topN);
   }
 
   /**
@@ -470,6 +473,7 @@ class OdooClient {
   async getInventoryValue(): Promise<number> {
     const products = await this.executeKw('product.product', 'search_read', [[['qty_available', '>', 0]]], {
       fields: ['list_price', 'qty_available'],
+      order: 'id asc', // Forzar orden por campo stored (el default de product.product usa qty_available que es computed)
     });
     return products.reduce(
       (sum: number, p: any) => sum + (p.list_price * p.qty_available),
