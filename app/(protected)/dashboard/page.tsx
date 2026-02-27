@@ -59,6 +59,7 @@ interface DashboardData {
   products: {
     topSelling: Array<{ id: number; name: string; totalQty: number }>;
     lowStock: Array<{ id: number; name: string; qty_available: number; list_price: number }>;
+    slowMoving: Array<{ id: number; name: string; qty_available: number }>;
     expiring: Array<{ id: number; name: string; totalQty: number; expirationDate: string; lotName: string; daysUntilExpiration: number }>;
   };
   updatedAt: string;

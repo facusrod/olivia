@@ -224,6 +224,10 @@ async function generateDashboardData() {
     revenue: { posToday: posToday.revenue, ecomToday: ecomToday.revenue, total: todayRevenue },
   });
 
+  // Slow moving: productos con stock alto que no están en top ventas (depende de topSellingProducts)
+  const topSellingIds = topSellingProducts.map((p: any) => p.id);
+  const slowMovingProducts = await timed('getSlowMovingProducts', odoo.getSlowMovingProducts(topSellingIds, 5));
+
   console.log(`📊 Dashboard generado: ${totalProducts} productos, valor total: ${inventoryValue}`);
   console.log(`⏱️ TOTAL generateDashboardData: ${Date.now() - totalStart}ms`);
 
@@ -261,6 +265,7 @@ async function generateDashboardData() {
     products: {
       topSelling: topSellingProducts,
       lowStock: lowStockProducts.slice(0, 5),
+      slowMoving: slowMovingProducts,
       expiring: expiringProducts,
     },
   };

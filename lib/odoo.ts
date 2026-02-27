@@ -439,6 +439,23 @@ class OdooClient {
   }
 
   /**
+   * Obtiene productos con stock alto que no están en la lista de más vendidos.
+   * Una sola llamada search_read con filtros y limit (no trae todos los productos).
+   */
+  async getSlowMovingProducts(
+    excludeIds: number[],
+    limit: number = 5
+  ): Promise<any[]> {
+    return this.executeKw('product.product', 'search_read', [
+      [['qty_available', '>', 0], ['id', 'not in', excludeIds]],
+    ], {
+      fields: ['id', 'name', 'qty_available'],
+      order: 'qty_available desc',
+      limit,
+    });
+  }
+
+  /**
    * Cuenta productos que cumplen los filtros usando read_group (1 RPC, 1 fila).
    */
   async getProductCount(filters: any[] = []): Promise<number> {

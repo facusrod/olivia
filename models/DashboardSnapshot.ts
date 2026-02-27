@@ -34,6 +34,7 @@ export interface IDashboardSnapshot extends Document {
   products: {
     topSelling: Array<{ id: number; name: string; totalQty: number }>;
     lowStock: Array<{ id: number; name: string; qty_available: number; list_price: number }>;
+    slowMoving: Array<{ id: number; name: string; qty_available: number }>;
     expiring: Array<{
       id: number;
       name: string;
@@ -83,6 +84,7 @@ const DashboardSnapshotSchema = new Schema<IDashboardSnapshot>(
     products: {
       topSelling: { type: Schema.Types.Mixed, default: [] },
       lowStock: { type: Schema.Types.Mixed, default: [] },
+      slowMoving: { type: Schema.Types.Mixed, default: [] },
       expiring: { type: Schema.Types.Mixed, default: [] },
     },
     generatedAt: { type: Date, required: true },
