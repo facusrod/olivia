@@ -438,7 +438,13 @@ export default function DashboardPage() {
                 key={product.id}
                 className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
               >
-                <div className="w-7 h-7 md:w-8 md:h-8 bg-green-600 text-white rounded-full flex items-center justify-center font-bold text-xs md:text-sm">
+                <div className={`w-7 h-7 md:w-8 md:h-8 text-white rounded-full flex items-center justify-center font-bold text-xs md:text-sm ${
+                  product.qty_available < 3
+                    ? 'bg-red-600'
+                    : product.qty_available < 5
+                    ? 'bg-orange-500'
+                    : 'bg-green-600'
+                }`}>
                   {idx + 1}
                 </div>
                 <div className="flex-1 min-w-0">
