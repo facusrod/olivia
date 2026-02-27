@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import {
   DollarSign,
   TrendingUp,
@@ -65,6 +66,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const router = useRouter();
+  const { data: session } = useSession();
 
   useEffect(() => {
     loadDashboard();
@@ -172,17 +174,14 @@ export default function DashboardPage() {
   return (
     <div className="p-4 md:p-6 space-y-4 md:space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h1 className="text-xl md:text-2xl text-gray-900">Dashboard</h1>
-          <p className="text-sm md:text-base text-gray-600 mt-1">
-            Vista general de tu negocio
-          </p>
-        </div>
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl md:text-2xl text-gray-900">
+          {session?.user?.name ? `¡Hola, ${session.user.name.split(' ')[0]}!` : '¡Hola!'}
+        </h1>
         <button
           onClick={refreshDashboard}
           disabled={refreshing}
-          className="hidden sm:flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 transition-colors disabled:opacity-50"
+          className="flex items-center gap-2 text-xs sm:text-sm text-gray-500 hover:text-gray-700 transition-colors disabled:opacity-50"
         >
           {refreshing ? (
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -190,24 +189,9 @@ export default function DashboardPage() {
             <div className={`w-2 h-2 rounded-full ${status.dotClass}`} />
           )}
           <span>{status.text}</span>
-          <span className="text-gray-400">· {status.dateShort}</span>
+          <span className="hidden sm:inline text-gray-400">· {status.dateShort}</span>
         </button>
       </div>
-
-      {/* Mobile: last update */}
-      <button
-        onClick={refreshDashboard}
-        disabled={refreshing}
-        className="sm:hidden flex items-center gap-2 text-xs text-gray-500 hover:text-gray-700 transition-colors disabled:opacity-50"
-      >
-        {refreshing ? (
-          <Loader2 className="w-3 h-3 animate-spin" />
-        ) : (
-          <div className={`w-2 h-2 rounded-full ${status.dotClass}`} />
-        )}
-        <span>{status.text}</span>
-        <span className="text-gray-400">· {status.dateShort}</span>
-      </button>
 
       {/* Métricas Principales - Ventas */}
       <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
