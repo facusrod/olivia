@@ -175,7 +175,7 @@ export default function DashboardPage() {
       <button
         onClick={refreshDashboard}
         disabled={refreshing}
-        className="flex items-center gap-2 text-xs sm:text-sm text-gray-500 hover:text-gray-700 transition-colors disabled:opacity-50"
+        className="flex items-center gap-2 text-xs sm:text-sm text-gray-500 hover:text-gray-700 transition-colors disabled:opacity-50 ml-auto"
       >
         {refreshing ? (
           <Loader2 className="w-3.5 h-3.5 animate-spin" />
