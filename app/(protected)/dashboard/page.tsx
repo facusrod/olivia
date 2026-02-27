@@ -57,8 +57,7 @@ interface DashboardData {
     totalProducts: number;
   };
   products: {
-    topSelling: Array<{ id: number; name: string; totalQty: number }>;
-    lowStock: Array<{ id: number; name: string; qty_available: number; list_price: number }>;
+    topSelling: Array<{ id: number; name: string; totalQty: number; qty_available: number }>;
     slowMoving: Array<{ id: number; name: string; qty_available: number }>;
     expiring: Array<{ id: number; name: string; totalQty: number; expirationDate: string; lotName: string; daysUntilExpiration: number }>;
   };
@@ -447,7 +446,7 @@ export default function DashboardPage() {
                     {product.name}
                   </p>
                   <p className="text-xs md:text-sm text-gray-600">
-                    {formatNumber(product.totalQty)} unidades vendidas
+                    {formatNumber(product.totalQty)} vendidas · {formatNumber(product.qty_available)} en stock
                   </p>
                 </div>
               </div>
@@ -455,54 +454,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Productos con Bajo Stock */}
-        <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6">
-          <div className="flex items-center gap-3 mb-4 md:mb-6">
-            <div className="w-9 h-9 md:w-10 md:h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-              <AlertTriangle className="w-4 h-4 md:w-5 md:h-5 text-orange-600" />
-            </div>
-            <div>
-              <h3 className="text-base md:text-lg text-gray-900">
-                Productos con Bajo Stock
-              </h3>
-              <p className="text-xs md:text-sm text-gray-600">Requieren atención urgente</p>
-            </div>
-          </div>
-          <div className="space-y-3 max-h-[420px] overflow-y-auto">
-            {data.products.lowStock.length === 0 ? (
-              <div className="text-center py-6 md:py-8 text-gray-500">
-                <Package className="w-10 h-10 md:w-12 md:h-12 mx-auto mb-3 text-gray-300" />
-                <p className="text-sm">¡Excelente! No hay productos con bajo stock</p>
-              </div>
-            ) : (
-              data.products.lowStock.map((product) => (
-                <div
-                  key={product.id}
-                  className="flex items-center justify-between p-3 bg-orange-50 rounded-lg border border-orange-200"
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900 truncate text-sm md:text-base">
-                      {product.name}
-                    </p>
-                    <p className="text-xs md:text-sm text-gray-600">
-                      Precio: {formatCurrency(product.list_price)}
-                    </p>
-                  </div>
-                  <div className="text-right ml-3">
-                    <p className="text-lg font-bold text-orange-600">
-                      {product.qty_available}
-                    </p>
-                    <p className="text-xs text-gray-600">unidades</p>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Productos con Bajas Ventas */}
-      {data.products.slowMoving && data.products.slowMoving.length > 0 && (
+        {/* Productos con Bajas Ventas */}
         <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6">
           <div className="flex items-center gap-3 mb-4 md:mb-6">
             <div className="w-9 h-9 md:w-10 md:h-10 bg-gray-100 rounded-lg flex items-center justify-center">
@@ -512,31 +464,38 @@ export default function DashboardPage() {
               <h3 className="text-base md:text-lg text-gray-900">
                 Productos con Bajas Ventas
               </h3>
-              <p className="text-xs md:text-sm text-gray-600">Mayor stock acumulado sin ventas recientes</p>
+              <p className="text-xs md:text-sm text-gray-600">Mayor stock sin ventas recientes</p>
             </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-            {data.products.slowMoving.map((product) => (
-              <div
-                key={product.id}
-                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-gray-900 truncate text-sm">
-                    {product.name}
-                  </p>
+          <div className="space-y-3 max-h-[420px] overflow-y-auto">
+            {data.products.slowMoving && data.products.slowMoving.length > 0 ? (
+              data.products.slowMoving.map((product, idx) => (
+                <div
+                  key={product.id}
+                  className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  <div className="w-7 h-7 md:w-8 md:h-8 bg-gray-400 text-white rounded-full flex items-center justify-center font-bold text-xs md:text-sm">
+                    {idx + 1}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-gray-900 truncate text-sm md:text-base">
+                      {product.name}
+                    </p>
+                    <p className="text-xs md:text-sm text-gray-600">
+                      {formatNumber(product.qty_available)} en stock
+                    </p>
+                  </div>
                 </div>
-                <div className="text-right ml-3">
-                  <p className="text-lg font-bold text-gray-600">
-                    {formatNumber(product.qty_available)}
-                  </p>
-                  <p className="text-xs text-gray-500">en stock</p>
-                </div>
+              ))
+            ) : (
+              <div className="text-center py-6 md:py-8 text-gray-500">
+                <Package className="w-10 h-10 md:w-12 md:h-12 mx-auto mb-3 text-gray-300" />
+                <p className="text-sm">No hay datos de productos con bajas ventas</p>
               </div>
-            ))}
+            )}
           </div>
         </div>
-      )}
+      </div>
 
       {/* Accesos Rápidos */}
       <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6">

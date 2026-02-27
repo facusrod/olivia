@@ -309,9 +309,26 @@ class OdooClient {
       productSales[productId].totalQty += quantity;
     }
 
-    return Object.values(productSales)
+    const topProducts = Object.values(productSales)
       .sort((a, b) => b.totalQty - a.totalQty)
       .slice(0, limit);
+
+    // Traer stock actual de los top products (1 RPC extra, solo N productos)
+    const topIds = topProducts.map(p => p.id);
+    if (topIds.length > 0) {
+      const stockData = await this.executeKw('product.product', 'search_read', [
+        [['id', 'in', topIds]],
+      ], {
+        fields: ['id', 'qty_available'],
+        order: 'id asc',
+      });
+      const stockMap = new Map(stockData.map((p: any) => [p.id, p.qty_available]));
+      for (const product of topProducts) {
+        (product as any).qty_available = stockMap.get(product.id) || 0;
+      }
+    }
+
+    return topProducts;
   }
 
   // ========== PEDIDOS WEB / ECOMMERCE ==========

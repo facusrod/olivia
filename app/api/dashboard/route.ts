@@ -168,7 +168,7 @@ async function generateDashboardData() {
     ecomLastMonth,
   ] = await Promise.all([
     limit(() => timed('getLowStockProducts', odoo.getLowStockProducts(10))),
-    limit(() => timed('getTopSellingProducts', odoo.getTopSellingProducts(30, 5))),
+    limit(() => timed('getTopSellingProducts', odoo.getTopSellingProducts(30, 10))),
     limit(() => timed('getExpiringProducts', odoo.getExpiringProducts(30, 10))),
     limit(() => timed('totalProducts', odoo.getProductCount())),
     limit(() => timed('outOfStock', odoo.getProductCount([['qty_available', '<=', 0]]))),
@@ -227,7 +227,7 @@ async function generateDashboardData() {
   // Slow moving: productos con stock alto que no están en top ventas (depende de topSellingProducts)
   const topSellingIds = topSellingProducts.map((p: any) => p.id);
   console.log('🔍 topSellingIds para excluir:', topSellingIds);
-  const slowMovingProducts = await timed('getSlowMovingProducts', odoo.getSlowMovingProducts(topSellingIds, 5));
+  const slowMovingProducts = await timed('getSlowMovingProducts', odoo.getSlowMovingProducts(topSellingIds, 10));
   console.log('🔍 slowMovingProducts:', JSON.stringify(slowMovingProducts));
 
   console.log(`📊 Dashboard generado: ${totalProducts} productos, valor total: ${inventoryValue}`);
@@ -266,7 +266,6 @@ async function generateDashboardData() {
     },
     products: {
       topSelling: topSellingProducts,
-      lowStock: lowStockProducts.slice(0, 5),
       slowMoving: slowMovingProducts,
       expiring: expiringProducts,
     },
