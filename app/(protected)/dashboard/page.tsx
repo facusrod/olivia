@@ -58,7 +58,7 @@ interface DashboardData {
   };
   products: {
     topSelling: Array<{ id: number; name: string; totalQty: number; qty_available: number }>;
-    slowMoving: Array<{ id: number; name: string; qty_available: number }>;
+    slowMoving: Array<{ id: number; name: string; totalQty: number; qty_available: number }>;
     expiring: Array<{ id: number; name: string; totalQty: number; expirationDate: string; lotName: string; daysUntilExpiration: number }>;
   };
   updatedAt: string;
@@ -82,7 +82,6 @@ export default function DashboardPage() {
       if (!response.ok) throw new Error('Error al cargar dashboard');
 
       const result = await response.json();
-      console.log('🔍 Dashboard data.products:', JSON.stringify(result.products?.slowMoving));
       setData(result);
     } catch (error) {
       console.error('Error:', error);
@@ -99,7 +98,6 @@ export default function DashboardPage() {
       if (!response.ok) throw new Error('Error al actualizar dashboard');
 
       const result = await response.json();
-      console.log('🔍 Refresh data.products.slowMoving:', JSON.stringify(result.products?.slowMoving));
       setData(result);
     } catch (error) {
       console.error('Error:', error);
@@ -488,7 +486,7 @@ export default function DashboardPage() {
                       {product.name}
                     </p>
                     <p className="text-xs md:text-sm text-gray-600">
-                      {formatNumber(product.qty_available)} en stock
+                      {formatNumber(product.totalQty)} vendidas · {formatNumber(product.qty_available)} en stock
                     </p>
                   </div>
                 </div>

@@ -277,7 +277,15 @@ class OdooClient {
     }
   }
 
-  async getTopSellingProducts(days: number = 30, limit: number = 10): Promise<any[]> {
+  /**
+   * Obtiene el ranking de ventas por producto: top sellers y least sellers.
+   * Una sola query a pos.order.line + 1 query para stock de los productos resultantes.
+   */
+  async getProductSalesRanking(
+    days: number = 30,
+    topLimit: number = 10,
+    bottomLimit: number = 10
+  ): Promise<{ topSelling: any[]; leastSelling: any[] }> {
     const date = new Date();
     date.setDate(date.getDate() - days);
     const dateStr = date.toISOString().split('T')[0];
@@ -289,7 +297,7 @@ class OdooClient {
     });
 
     if (!orderLines || orderLines.length === 0) {
-      return [];
+      return { topSelling: [], leastSelling: [] };
     }
 
     const productSales: { [key: number]: { id: number; name: string; totalQty: number } } = {};
@@ -309,26 +317,28 @@ class OdooClient {
       productSales[productId].totalQty += quantity;
     }
 
-    const topProducts = Object.values(productSales)
-      .sort((a, b) => b.totalQty - a.totalQty)
-      .slice(0, limit);
+    const sorted = Object.values(productSales)
+      .sort((a, b) => b.totalQty - a.totalQty);
 
-    // Traer stock actual de los top products (1 RPC extra, solo N productos)
-    const topIds = topProducts.map(p => p.id);
-    if (topIds.length > 0) {
+    const topProducts = sorted.slice(0, topLimit);
+    const bottomProducts = sorted.slice(-bottomLimit).reverse(); // menos vendidos primero
+
+    // Traer stock de todos los productos en ambas listas (1 RPC, ~20 productos)
+    const allIds = [...new Set([...topProducts, ...bottomProducts].map(p => p.id))];
+    if (allIds.length > 0) {
       const stockData = await this.executeKw('product.product', 'search_read', [
-        [['id', 'in', topIds]],
+        [['id', 'in', allIds]],
       ], {
         fields: ['id', 'qty_available'],
         order: 'id asc',
       });
       const stockMap = new Map(stockData.map((p: any) => [p.id, p.qty_available]));
-      for (const product of topProducts) {
+      for (const product of [...topProducts, ...bottomProducts]) {
         (product as any).qty_available = stockMap.get(product.id) || 0;
       }
     }
 
-    return topProducts;
+    return { topSelling: topProducts, leastSelling: bottomProducts };
   }
 
   // ========== PEDIDOS WEB / ECOMMERCE ==========
@@ -453,26 +463,6 @@ class OdooClient {
       console.error('Error getting ecommerce order stats:', error?.message || error);
       return { count: 0, revenue: 0 };
     }
-  }
-
-  /**
-   * Obtiene productos con stock alto que no están en la lista de más vendidos.
-   * qty_available es un campo calculado en Odoo (no stored), así que no se puede
-   * usar en ORDER BY. Se trae todo y se ordena en memoria.
-   */
-  async getSlowMovingProducts(
-    excludeIds: number[],
-    topN: number = 5
-  ): Promise<any[]> {
-    const products = await this.executeKw('product.product', 'search_read', [
-      [['qty_available', '>', 0], ['id', 'not in', excludeIds]],
-    ], {
-      fields: ['id', 'name', 'qty_available'],
-      order: 'id asc', // Forzar orden por campo stored (qty_available es computed, no se puede usar en ORDER BY)
-    });
-    return products
-      .sort((a: any, b: any) => b.qty_available - a.qty_available)
-      .slice(0, topN);
   }
 
   /**

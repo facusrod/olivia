@@ -155,7 +155,7 @@ async function generateDashboardData() {
   // Cada query tiene timing log para diagnosticar cuellos de botella.
   const [
     lowStockProducts,
-    topSellingProducts,
+    salesRanking,
     expiringProducts,
     totalProducts,
     outOfStockCount,
@@ -168,7 +168,7 @@ async function generateDashboardData() {
     ecomLastMonth,
   ] = await Promise.all([
     limit(() => timed('getLowStockProducts', odoo.getLowStockProducts(10))),
-    limit(() => timed('getTopSellingProducts', odoo.getTopSellingProducts(30, 10))),
+    limit(() => timed('getProductSalesRanking', odoo.getProductSalesRanking(30, 10, 10))),
     limit(() => timed('getExpiringProducts', odoo.getExpiringProducts(30, 10))),
     limit(() => timed('totalProducts', odoo.getProductCount())),
     limit(() => timed('outOfStock', odoo.getProductCount([['qty_available', '<=', 0]]))),
@@ -217,18 +217,8 @@ async function generateDashboardData() {
     ? monthRevenue / totalOrdersMonth
     : 0;
 
-  // Debug
-  console.log('🔍 Dashboard debug:', {
-    pos: { today: posToday.count, month: posMonth.count },
-    ecommerce: { today: ecomToday.count, month: ecomMonth.count },
-    revenue: { posToday: posToday.revenue, ecomToday: ecomToday.revenue, total: todayRevenue },
-  });
-
-  // Slow moving: productos con stock alto que no están en top ventas (depende de topSellingProducts)
-  const topSellingIds = topSellingProducts.map((p: any) => p.id);
-  console.log('🔍 topSellingIds para excluir:', topSellingIds);
-  const slowMovingProducts = await timed('getSlowMovingProducts', odoo.getSlowMovingProducts(topSellingIds, 10));
-  console.log('🔍 slowMovingProducts:', JSON.stringify(slowMovingProducts));
+  // Desestructurar ranking de ventas
+  const { topSelling: topSellingProducts, leastSelling: leastSellingProducts } = salesRanking;
 
   console.log(`📊 Dashboard generado: ${totalProducts} productos, valor total: ${inventoryValue}`);
   console.log(`⏱️ TOTAL generateDashboardData: ${Date.now() - totalStart}ms`);
@@ -266,7 +256,7 @@ async function generateDashboardData() {
     },
     products: {
       topSelling: topSellingProducts,
-      slowMoving: slowMovingProducts,
+      slowMoving: leastSellingProducts,
       expiring: expiringProducts,
     },
   };

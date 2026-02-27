@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
     const lowStock = await odoo.getLowStockProducts(10);
 
     // Obtener productos más vendidos
-    const topSelling = await odoo.getTopSellingProducts(30, 10);
+    const { topSelling } = await odoo.getProductSalesRanking(30, 10, 0);
 
     // Obtener análisis de Gemini
     const analysis = await gemini.analyzeForPurchaseOrders(lowStock, topSelling);

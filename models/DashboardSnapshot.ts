@@ -33,7 +33,7 @@ export interface IDashboardSnapshot extends Document {
   };
   products: {
     topSelling: Array<{ id: number; name: string; totalQty: number; qty_available: number }>;
-    slowMoving: Array<{ id: number; name: string; qty_available: number }>;
+    slowMoving: Array<{ id: number; name: string; totalQty: number; qty_available: number }>;
     expiring: Array<{
       id: number;
       name: string;
