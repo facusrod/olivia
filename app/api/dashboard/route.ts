@@ -226,7 +226,9 @@ async function generateDashboardData() {
 
   // Slow moving: productos con stock alto que no están en top ventas (depende de topSellingProducts)
   const topSellingIds = topSellingProducts.map((p: any) => p.id);
+  console.log('🔍 topSellingIds para excluir:', topSellingIds);
   const slowMovingProducts = await timed('getSlowMovingProducts', odoo.getSlowMovingProducts(topSellingIds, 5));
+  console.log('🔍 slowMovingProducts:', JSON.stringify(slowMovingProducts));
 
   console.log(`📊 Dashboard generado: ${totalProducts} productos, valor total: ${inventoryValue}`);
   console.log(`⏱️ TOTAL generateDashboardData: ${Date.now() - totalStart}ms`);

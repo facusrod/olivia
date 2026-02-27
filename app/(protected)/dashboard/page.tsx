@@ -83,6 +83,7 @@ export default function DashboardPage() {
       if (!response.ok) throw new Error('Error al cargar dashboard');
 
       const result = await response.json();
+      console.log('🔍 Dashboard data.products:', JSON.stringify(result.products?.slowMoving));
       setData(result);
     } catch (error) {
       console.error('Error:', error);
@@ -99,6 +100,7 @@ export default function DashboardPage() {
       if (!response.ok) throw new Error('Error al actualizar dashboard');
 
       const result = await response.json();
+      console.log('🔍 Refresh data.products.slowMoving:', JSON.stringify(result.products?.slowMoving));
       setData(result);
     } catch (error) {
       console.error('Error:', error);
@@ -498,6 +500,43 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Productos con Bajas Ventas */}
+      {data.products.slowMoving && data.products.slowMoving.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6">
+          <div className="flex items-center gap-3 mb-4 md:mb-6">
+            <div className="w-9 h-9 md:w-10 md:h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+              <TrendingDown className="w-4 h-4 md:w-5 md:h-5 text-gray-600" />
+            </div>
+            <div>
+              <h3 className="text-base md:text-lg text-gray-900">
+                Productos con Bajas Ventas
+              </h3>
+              <p className="text-xs md:text-sm text-gray-600">Mayor stock acumulado sin ventas recientes</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            {data.products.slowMoving.map((product) => (
+              <div
+                key={product.id}
+                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-gray-900 truncate text-sm">
+                    {product.name}
+                  </p>
+                </div>
+                <div className="text-right ml-3">
+                  <p className="text-lg font-bold text-gray-600">
+                    {formatNumber(product.qty_available)}
+                  </p>
+                  <p className="text-xs text-gray-500">en stock</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Accesos Rápidos */}
       <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6">
