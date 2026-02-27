@@ -154,7 +154,6 @@ async function generateDashboardData() {
   // Máximo 3 queries simultáneas para no saturar workers de Odoo.
   // Cada query tiene timing log para diagnosticar cuellos de botella.
   const [
-    lowStockProducts,
     salesRanking,
     expiringProducts,
     totalProducts,
@@ -167,7 +166,6 @@ async function generateDashboardData() {
     posLastMonth,
     ecomLastMonth,
   ] = await Promise.all([
-    limit(() => timed('getLowStockProducts', odoo.getLowStockProducts(10))),
     limit(() => timed('getProductSalesRanking', odoo.getProductSalesRanking(30, 10, 10))),
     limit(() => timed('getExpiringProducts', odoo.getExpiringProducts(30, 10))),
     limit(() => timed('totalProducts', odoo.getProductCount())),
@@ -248,7 +246,6 @@ async function generateDashboardData() {
       },
     },
     inventory: {
-      lowStock: lowStockProducts.length,
       outOfStock: outOfStockCount,
       totalValue: inventoryValue,
       expiringSoon: expiringProducts.length,

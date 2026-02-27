@@ -25,7 +25,6 @@ export interface IDashboardSnapshot extends Document {
     };
   };
   inventory: {
-    lowStock: number;
     outOfStock: number;
     totalValue: number;
     expiringSoon: number;
@@ -74,7 +73,6 @@ const DashboardSnapshotSchema = new Schema<IDashboardSnapshot>(
       },
     },
     inventory: {
-      lowStock: { type: Number, default: 0 },
       outOfStock: { type: Number, default: 0 },
       totalValue: { type: Number, default: 0 },
       expiringSoon: { type: Number, default: 0 },

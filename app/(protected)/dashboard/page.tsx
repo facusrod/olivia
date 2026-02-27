@@ -50,7 +50,6 @@ interface DashboardData {
     };
   };
   inventory: {
-    lowStock: number;
     outOfStock: number;
     totalValue: number;
     expiringSoon: number;
@@ -283,8 +282,8 @@ export default function DashboardPage() {
               <Package className="w-5 h-5 md:w-6 md:h-6 text-indigo-600" />
             </div>
             <div className="flex items-center gap-1">
-              {data.inventory.lowStock > 0 && (
-                <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse" />
+              {data.inventory.outOfStock > 0 && (
+                <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
               )}
             </div>
           </div>
@@ -293,58 +292,10 @@ export default function DashboardPage() {
             {formatCurrency(data.inventory.totalValue)}
           </p>
           <p className="text-xs md:text-sm text-gray-500 mt-1 md:mt-2">
-            {formatNumber(data.inventory.totalProducts || 0)} productos · {data.inventory.lowStock} bajo stock
+            {formatNumber(data.inventory.totalProducts || 0)} productos · {data.inventory.outOfStock} agotados
           </p>
         </div>
       </div>
-
-      {/* Alertas de Inventario */}
-      {(data.inventory.lowStock > 0 || data.inventory.outOfStock > 0 || data.inventory.expiringSoon > 0) && (
-        <div className="bg-gradient-to-r from-orange-50 to-red-50 border border-orange-200 rounded-xl p-4 md:p-6">
-          <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
-            <div className="w-10 h-10 md:w-12 md:h-12 bg-orange-500 rounded-lg flex items-center justify-center flex-shrink-0">
-              <AlertTriangle className="w-5 h-5 md:w-6 md:h-6 text-white" />
-            </div>
-            <div className="flex-1">
-              <h3 className="text-base md:text-lg text-gray-900 mb-2">
-                Alerta de Inventario
-              </h3>
-              <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-4 text-sm">
-                {data.inventory.expiringSoon > 0 && (
-                  <div className="flex items-center gap-2">
-                    <CalendarClock className="w-4 h-4 text-red-600 flex-shrink-0" />
-                    <span className="text-gray-700">
-                      <strong>{data.inventory.expiringSoon}</strong> próximos a vencer
-                    </span>
-                  </div>
-                )}
-                {data.inventory.lowStock > 0 && (
-                  <div className="flex items-center gap-2">
-                    <TrendingDown className="w-4 h-4 text-orange-600 flex-shrink-0" />
-                    <span className="text-gray-700">
-                      <strong>{data.inventory.lowStock}</strong> bajo stock
-                    </span>
-                  </div>
-                )}
-                {data.inventory.outOfStock > 0 && (
-                  <div className="flex items-center gap-2">
-                    <Package className="w-4 h-4 text-red-600 flex-shrink-0" />
-                    <span className="text-gray-700">
-                      <strong>{data.inventory.outOfStock}</strong> agotados
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-            <button
-              onClick={() => router.push('/suggestions')}
-              className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-sm font-semibold w-full sm:w-auto"
-            >
-              Ver Sugerencias
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Grid de 3 columnas para productos */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
