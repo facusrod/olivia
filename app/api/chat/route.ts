@@ -76,8 +76,6 @@ export async function POST(req: NextRequest) {
         // Continuar sin contexto si hay error
       }
     }
-    console.log('Chat context:', JSON.stringify(context));
-
     const response = await gemini.chat(message, history, context);
 
     // Guardar mensajes en la conversación

@@ -1,5 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { getOdooClient, OdooProduct } from './odoo';
+import { OdooProduct } from './odoo';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
@@ -32,7 +32,6 @@ class GeminiService {
       4. Proporcionar información sobre stock disponible
       IMPORTANTE: Solo proporciona información basada en los datos del inventario proporcionados a continuación. No inventes productos, precios o información que no esté en los datos. Si no tienes datos específicos, indica claramente que no tienes acceso al inventario y sugiere verificar directamente en el sistema.
       `;
-    console.log('Building system prompt with context:', JSON.stringify(context?.products));
     if (context?.products && context.products.length > 0) {
       prompt += `\n\n=== PRODUCTOS DISPONIBLES ===\n`;
       prompt += context.products

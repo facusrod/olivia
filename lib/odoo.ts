@@ -144,7 +144,6 @@ class OdooClient {
       }
 
       this.uid = uid;
-      console.log('✅ Odoo authenticated, UID:', uid);
       return uid;
     } catch (error: any) {
       // Limpiar promesa en caso de error para permitir reintentos
