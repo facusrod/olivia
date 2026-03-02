@@ -42,6 +42,8 @@ interface OdooEcommerceOrder {
   commitment_date: string | false;
   amount_total: number;
   state: string;
+  delivery_status: string | false;
+  invoice_status: string | false;
   website_id: [number, string] | false;
   note: string | false;
   order_line: number[];
@@ -360,7 +362,8 @@ class OdooClient {
       fields: [
         'id', 'name', 'partner_id', 'partner_shipping_id',
         'date_order', 'commitment_date', 'amount_total',
-        'state', 'website_id', 'note', 'order_line',
+        'state', 'delivery_status', 'invoice_status',
+        'website_id', 'note', 'order_line',
       ],
       limit,
       offset,
@@ -378,7 +381,8 @@ class OdooClient {
       fields: [
         'id', 'name', 'partner_id', 'partner_shipping_id',
         'date_order', 'commitment_date', 'amount_total',
-        'state', 'website_id', 'note', 'order_line',
+        'state', 'delivery_status', 'invoice_status',
+        'website_id', 'note', 'order_line',
       ],
       limit: 1,
     });

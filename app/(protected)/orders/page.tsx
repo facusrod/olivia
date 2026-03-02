@@ -20,6 +20,7 @@ interface EcommerceOrder {
   date_order: string;
   amount_total: number;
   state: string;
+  delivery_status: string | false;
   website_id: [number, string] | false;
 }
 
@@ -29,15 +30,26 @@ interface Summary {
   todayCount: number;
 }
 
-const getStateBadge = (state: string) => {
+const getPaymentBadge = (state: string) => {
   const map: Record<string, { label: string; color: string }> = {
     draft: { label: 'Borrador', color: 'text-gray-600 bg-gray-100' },
-    sent: { label: 'Sin Pagar', color: 'text-orange-700 bg-orange-50' },
-    sale: { label: 'Pagado', color: 'text-green-700 bg-green-50' },
-    done: { label: 'Completado', color: 'text-blue-600 bg-blue-50' },
-    cancel: { label: 'Cancelado', color: 'text-red-600 bg-red-50' },
+    sent: { label: 'Sin Pagar', color: 'text-orange-700 bg-orange-100' },
+    sale: { label: 'Pagado', color: 'text-green-700 bg-green-100' },
+    done: { label: 'Cerrado', color: 'text-blue-600 bg-blue-100' },
+    cancel: { label: 'Cancelado', color: 'text-red-600 bg-red-100' },
   };
   return map[state] || { label: state, color: 'text-gray-600 bg-gray-100' };
+};
+
+const getDeliveryBadge = (deliveryStatus: string | false) => {
+  if (!deliveryStatus || deliveryStatus === 'no') {
+    return { label: 'No Enviado', color: 'text-gray-500 bg-gray-100' };
+  }
+  const map: Record<string, { label: string; color: string }> = {
+    partial: { label: 'Envío Parcial', color: 'text-amber-700 bg-amber-100' },
+    full: { label: 'Enviado', color: 'text-green-700 bg-green-100' },
+  };
+  return map[deliveryStatus] || { label: deliveryStatus, color: 'text-gray-500 bg-gray-100' };
 };
 
 const formatCurrency = (value: number) =>
@@ -200,7 +212,8 @@ export default function OrdersPage() {
             {/* Mobile: card list */}
             <div className="md:hidden divide-y divide-gray-200">
               {orders.map((order) => {
-                const badge = getStateBadge(order.state);
+                const payment = getPaymentBadge(order.state);
+                const delivery = getDeliveryBadge(order.delivery_status);
                 return (
                   <div
                     key={order.id}
@@ -212,11 +225,14 @@ export default function OrdersPage() {
                         <p className="font-medium text-primary-700 text-sm">{order.name}</p>
                         <ExternalLink className="w-3 h-3 text-gray-400" />
                       </div>
-                      <span
-                        className={`inline-block px-2 py-0.5 text-xs font-semibold rounded-full ${badge.color}`}
-                      >
-                        {badge.label}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className={`inline-block px-2 py-0.5 text-xs font-semibold rounded-full ${payment.color}`}>
+                          {payment.label}
+                        </span>
+                        <span className={`inline-block px-2 py-0.5 text-xs font-semibold rounded-full ${delivery.color}`}>
+                          {delivery.label}
+                        </span>
+                      </div>
                     </div>
                     <p className="text-sm text-gray-700 truncate">{order.partner_id[1]}</p>
                     <div className="flex items-center justify-between mt-2">
@@ -256,13 +272,17 @@ export default function OrdersPage() {
                       Total
                     </th>
                     <th className="text-center px-6 py-3 text-sm font-semibold text-gray-900">
-                      Estado
+                      Pago
+                    </th>
+                    <th className="text-center px-6 py-3 text-sm font-semibold text-gray-900">
+                      Envío
                     </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {orders.map((order) => {
-                    const badge = getStateBadge(order.state);
+                    const payment = getPaymentBadge(order.state);
+                    const delivery = getDeliveryBadge(order.delivery_status);
                     return (
                       <tr
                         key={order.id}
@@ -296,10 +316,13 @@ export default function OrdersPage() {
                           {formatCurrency(order.amount_total)}
                         </td>
                         <td className="px-6 py-4 text-center">
-                          <span
-                            className={`inline-block px-3 py-1 text-xs font-semibold rounded-full ${badge.color}`}
-                          >
-                            {badge.label}
+                          <span className={`inline-block px-3 py-1 text-xs font-semibold rounded-full ${payment.color}`}>
+                            {payment.label}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <span className={`inline-block px-3 py-1 text-xs font-semibold rounded-full ${delivery.color}`}>
+                            {delivery.label}
                           </span>
                         </td>
                       </tr>

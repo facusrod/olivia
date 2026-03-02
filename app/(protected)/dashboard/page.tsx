@@ -68,6 +68,7 @@ interface PendingOrder {
   date_order: string;
   amount_total: number;
   state: string;
+  delivery_status: string | false;
 }
 
 export default function DashboardPage() {
@@ -128,10 +129,16 @@ export default function DashboardPage() {
   const loadPendingOrders = async () => {
     try {
       setPendingLoading(true);
-      const response = await fetch('/api/orders?state=sent,sale&limit=5');
+      const response = await fetch('/api/orders?state=sent,sale&limit=10');
       if (!response.ok) throw new Error('Error al cargar pedidos');
       const result = await response.json();
-      setPendingOrders(result.orders);
+      // Filtrar: excluir pagados que ya fueron entregados completamente
+      const filtered = (result.orders as PendingOrder[]).filter((o) => {
+        if (o.state === 'sent') return true;
+        if (o.state === 'sale' && o.delivery_status === 'full') return false;
+        return true;
+      });
+      setPendingOrders(filtered.slice(0, 5));
       setPendingSummary(result.summary);
     } catch (error) {
       console.error('Error pedidos:', error);
@@ -252,12 +259,23 @@ export default function DashboardPage() {
     return { dotClass, textClass, rowClass, text, dateShort };
   };
 
-  const getStateBadge = (state: string) => {
+  const getPaymentBadge = (state: string) => {
     const map: Record<string, { label: string; color: string }> = {
-      sent: { label: 'Sin Pagar', color: 'text-orange-700 bg-orange-50 border border-orange-200' },
-      sale: { label: 'Pagado', color: 'text-green-700 bg-green-50 border border-green-200' },
+      sent: { label: 'Sin Pagar', color: 'text-orange-700 bg-orange-100' },
+      sale: { label: 'Pagado', color: 'text-green-700 bg-green-100' },
     };
     return map[state] || { label: state, color: 'text-gray-600 bg-gray-100' };
+  };
+
+  const getDeliveryBadge = (deliveryStatus: string | false) => {
+    if (!deliveryStatus || deliveryStatus === 'no') {
+      return { label: 'No Enviado', color: 'text-gray-500 bg-gray-100' };
+    }
+    const map: Record<string, { label: string; color: string }> = {
+      partial: { label: 'Parcial', color: 'text-amber-700 bg-amber-100' },
+      full: { label: 'Enviado', color: 'text-green-700 bg-green-100' },
+    };
+    return map[deliveryStatus] || { label: deliveryStatus, color: 'text-gray-500 bg-gray-100' };
   };
 
   const status = getUpdateStatus(data.updatedAt);
@@ -449,7 +467,8 @@ export default function DashboardPage() {
             <div className="space-y-2">
               {pendingOrders.map((order) => {
                 const urgency = getOrderUrgency(order.date_order);
-                const badge = getStateBadge(order.state);
+                const payment = getPaymentBadge(order.state);
+                const delivery = getDeliveryBadge(order.delivery_status);
 
                 return (
                   <div
@@ -458,10 +477,13 @@ export default function DashboardPage() {
                     className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer hover:shadow-sm transition-all ${urgency.rowClass}`}
                   >
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
+                      <div className="flex items-center gap-1.5 flex-wrap">
                         <p className="font-medium text-primary-700 text-sm">{order.name}</p>
-                        <span className={`inline-block px-2 py-0.5 text-xs font-semibold rounded-full ${badge.color}`}>
-                          {badge.label}
+                        <span className={`inline-block px-1.5 py-0.5 text-xs font-semibold rounded-full ${payment.color}`}>
+                          {payment.label}
+                        </span>
+                        <span className={`inline-block px-1.5 py-0.5 text-xs font-semibold rounded-full ${delivery.color}`}>
+                          {delivery.label}
                         </span>
                       </div>
                       <p className="text-sm text-gray-700 truncate mt-0.5">{order.partner_id[1]}</p>

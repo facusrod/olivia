@@ -30,9 +30,16 @@ export async function GET(req: NextRequest) {
       odoo.getEcommerceOrders([['state', 'in', ['sent', 'sale']]], 500),
     ]);
 
-    // Calcular métricas desde allPending (sin llamadas extra)
-    const pendingCount = allPending.length;
-    const totalPendingAmount = allPending.reduce(
+    // Filtrar: excluir pedidos 'sale' que ya fueron entregados completamente
+    const trulyPending = allPending.filter((o) => {
+      if (o.state === 'sent') return true; // Sin pagar siempre es pendiente
+      if (o.state === 'sale' && o.delivery_status === 'full') return false; // Pagado + entregado = no pendiente
+      return true;
+    });
+
+    // Calcular métricas desde trulyPending (sin llamadas extra)
+    const pendingCount = trulyPending.length;
+    const totalPendingAmount = trulyPending.reduce(
       (sum, o) => sum + (o.amount_total || 0),
       0
     );
@@ -40,7 +47,7 @@ export async function GET(req: NextRequest) {
     // Pedidos de hoy (filtrar en JS, no otra llamada a Odoo)
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
-    const todayCount = allPending.filter(
+    const todayCount = trulyPending.filter(
       (o) => new Date(o.date_order) >= startOfDay
     ).length;
 
