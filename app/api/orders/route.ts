@@ -45,8 +45,14 @@ export async function GET(req: NextRequest) {
     );
 
     // Pedidos de hoy (filtrar en JS, no otra llamada a Odoo)
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
+    // Medianoche Argentina (UTC-3) = 03:00 UTC
+    const ART_OFFSET = 3;
+    const now = new Date();
+    const todayArg = new Date(now.getTime() - ART_OFFSET * 3600000);
+    const startOfDay = new Date(Date.UTC(
+      todayArg.getUTCFullYear(), todayArg.getUTCMonth(), todayArg.getUTCDate(),
+      ART_OFFSET, 0, 0
+    ));
     const todayCount = trulyPending.filter(
       (o) => new Date(o.date_order) >= startOfDay
     ).length;

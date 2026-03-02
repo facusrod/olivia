@@ -166,8 +166,8 @@ async function generateDashboardData() {
     posLastMonth,
     ecomLastMonth,
   ] = await Promise.all([
-    limit(() => timed('getProductSalesRanking', odoo.getProductSalesRanking(30, 10, 10))),
-    limit(() => timed('getExpiringProducts', odoo.getExpiringProducts(30, 10))),
+    limit(() => timed('getProductSalesRanking', odoo.getProductSalesRanking(30, 50, 50))),
+    limit(() => timed('getExpiringProducts', odoo.getExpiringProducts(30, 50))),
     limit(() => timed('totalProducts', odoo.getProductCount())),
     limit(() => timed('outOfStock', odoo.getProductCount([['qty_available', '<=', 0]]))),
     limit(() => timed('inventoryValue', odoo.getInventoryValue())),

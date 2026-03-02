@@ -57,6 +57,16 @@ interface OdooEcommerceOrderLine {
   price_subtotal: number;
 }
 
+/**
+ * Odoo XML-RPC devuelve datetimes en UTC sin sufijo de timezone (ej: "2026-03-02 02:30:29").
+ * JavaScript los interpreta como hora local, causando errores de timezone.
+ * Esta función los convierte a ISO 8601 con Z para que se parseen como UTC.
+ */
+function normalizeOdooDatetime(dt: string | false): string | false {
+  if (!dt) return false;
+  return dt.replace(' ', 'T') + 'Z';
+}
+
 class OdooClient {
   private config: OdooConfig;
   private uid: number | null = null;
@@ -357,7 +367,7 @@ class OdooClient {
       ['website_id', '!=', false],
       ...extraFilters,
     ];
-    return this.executeKw('sale.order', 'search_read', [baseFilters], {
+    const orders: OdooEcommerceOrder[] = await this.executeKw('sale.order', 'search_read', [baseFilters], {
       fields: [
         'id', 'name', 'partner_id', 'partner_shipping_id',
         'date_order', 'commitment_date', 'amount_total',
@@ -368,13 +378,18 @@ class OdooClient {
       offset,
       order: 'date_order desc',
     });
+    return orders.map(o => ({
+      ...o,
+      date_order: normalizeOdooDatetime(o.date_order) as string,
+      commitment_date: normalizeOdooDatetime(o.commitment_date) as string | false,
+    }));
   }
 
   /**
    * Obtiene un pedido ecommerce por ID.
    */
   async getEcommerceOrderById(id: number): Promise<OdooEcommerceOrder | null> {
-    const orders = await this.executeKw('sale.order', 'search_read', [
+    const orders: OdooEcommerceOrder[] = await this.executeKw('sale.order', 'search_read', [
       [['id', '=', id]],
     ], {
       fields: [
@@ -385,7 +400,12 @@ class OdooClient {
       ],
       limit: 1,
     });
-    return orders.length > 0 ? orders[0] : null;
+    if (orders.length === 0) return null;
+    return {
+      ...orders[0],
+      date_order: normalizeOdooDatetime(orders[0].date_order) as string,
+      commitment_date: normalizeOdooDatetime(orders[0].commitment_date) as string | false,
+    };
   }
 
   /**

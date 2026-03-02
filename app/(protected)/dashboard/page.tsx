@@ -21,7 +21,10 @@ import {
   Store,
   Globe,
   ExternalLink,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
+import Modal from '@/components/Modal';
 
 interface DashboardData {
   sales: {
@@ -79,6 +82,8 @@ export default function DashboardPage() {
   const [pendingLoading, setPendingLoading] = useState(true);
   const [pendingSummary, setPendingSummary] = useState<{ pendingCount: number; totalPendingAmount: number } | null>(null);
   const [, setTick] = useState(0);
+  const [modalType, setModalType] = useState<'expiring' | 'topSelling' | 'slowMoving' | null>(null);
+  const [modalPage, setModalPage] = useState(1);
   const router = useRouter();
 
   useEffect(() => {
@@ -281,6 +286,122 @@ export default function DashboardPage() {
   };
 
   const status = getUpdateStatus(data.updatedAt);
+
+  const MODAL_PAGE_SIZE = 20;
+
+  const openModal = (type: 'expiring' | 'topSelling' | 'slowMoving') => {
+    setModalType(type);
+    setModalPage(1);
+  };
+
+  const closeModal = () => setModalType(null);
+
+  const getModalConfig = () => {
+    if (!modalType) return null;
+    const configs = {
+      expiring: {
+        items: data.products.expiring,
+        title: 'Próximos a Vencer',
+        subtitle: 'Próximos 30 días',
+        icon: <CalendarClock className="w-5 h-5 text-red-600" />,
+      },
+      topSelling: {
+        items: data.products.topSelling,
+        title: 'Productos Más Vendidos',
+        subtitle: 'Últimos 30 días',
+        icon: <TrendingUp className="w-5 h-5 text-green-600" />,
+      },
+      slowMoving: {
+        items: data.products.slowMoving,
+        title: 'Productos con Bajas Ventas',
+        subtitle: 'Mayor stock sin ventas recientes',
+        icon: <TrendingDown className="w-5 h-5 text-gray-600" />,
+      },
+    };
+    return configs[modalType];
+  };
+
+  const renderExpiringItem = (product: DashboardData['products']['expiring'][0]) => {
+    const isUrgent = product.daysUntilExpiration <= 7;
+    const isWarning = product.daysUntilExpiration > 7 && product.daysUntilExpiration <= 15;
+    return (
+      <div
+        key={`${product.id}-${product.lotName}`}
+        className={`flex items-center justify-between p-3 rounded-lg border ${
+          isUrgent
+            ? 'bg-red-50 border-red-200'
+            : isWarning
+            ? 'bg-orange-50 border-orange-200'
+            : 'bg-yellow-50 border-yellow-200'
+        }`}
+      >
+        <div className="flex-1 min-w-0">
+          <p className="font-medium text-gray-900 truncate text-sm md:text-base">
+            {product.name}
+          </p>
+          <p className="text-xs text-gray-600">Lote: {product.lotName}</p>
+          <p className="text-xs text-gray-600 mt-1">
+            {new Date(product.expirationDate).toLocaleDateString('es-ES', { timeZone: 'America/Buenos_Aires' })}
+          </p>
+        </div>
+        <div className="text-right ml-3">
+          <p className={`text-lg font-bold ${
+            isUrgent ? 'text-red-600' : isWarning ? 'text-orange-600' : 'text-yellow-600'
+          }`}>
+            {product.daysUntilExpiration}
+          </p>
+          <p className="text-xs text-gray-600">
+            {product.daysUntilExpiration === 1 ? 'día' : 'días'}
+          </p>
+          <p className="text-xs text-gray-500 mt-1">{product.totalQty} u.</p>
+        </div>
+      </div>
+    );
+  };
+
+  const renderTopSellingItem = (product: DashboardData['products']['topSelling'][0], rank: number) => (
+    <div
+      key={product.id}
+      className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+    >
+      <div className={`w-7 h-7 md:w-8 md:h-8 text-white rounded-full flex items-center justify-center font-bold text-xs md:text-sm ${
+        product.qty_available < 3
+          ? 'bg-red-600'
+          : product.qty_available < 5
+          ? 'bg-orange-500'
+          : 'bg-green-600'
+      }`}>
+        {rank}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="font-medium text-gray-900 truncate text-sm md:text-base">
+          {product.name}
+        </p>
+        <p className="text-xs md:text-sm text-gray-600">
+          {formatNumber(product.totalQty)} vendidas · {formatNumber(product.qty_available)} en stock
+        </p>
+      </div>
+    </div>
+  );
+
+  const renderSlowMovingItem = (product: DashboardData['products']['slowMoving'][0], rank: number) => (
+    <div
+      key={product.id}
+      className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+    >
+      <div className="w-7 h-7 md:w-8 md:h-8 bg-gray-400 text-white rounded-full flex items-center justify-center font-bold text-xs md:text-sm">
+        {rank}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="font-medium text-gray-900 truncate text-sm md:text-base">
+          {product.name}
+        </p>
+        <p className="text-xs md:text-sm text-gray-600">
+          {formatNumber(product.totalQty)} vendidas · {formatNumber(product.qty_available)} en stock
+        </p>
+      </div>
+    </div>
+  );
 
   return (
     <div className="p-4 md:p-6 space-y-4 md:space-y-6">
@@ -517,16 +638,27 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
         {/* Productos Próximos a Vencer */}
         <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6">
-          <div className="flex items-center gap-3 mb-4 md:mb-6">
-            <div className="w-9 h-9 md:w-10 md:h-10 bg-red-100 rounded-lg flex items-center justify-center">
-              <CalendarClock className="w-4 h-4 md:w-5 md:h-5 text-red-600" />
+          <div className="flex items-center justify-between mb-4 md:mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 md:w-10 md:h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                <CalendarClock className="w-4 h-4 md:w-5 md:h-5 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-base md:text-lg text-gray-900">
+                  Próximos a Vencer
+                </h3>
+                <p className="text-xs md:text-sm text-gray-600">Próximos 30 días</p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-base md:text-lg text-gray-900">
-                Próximos a Vencer
-              </h3>
-              <p className="text-xs md:text-sm text-gray-600">Próximos 30 días</p>
-            </div>
+            {data.products.expiring.length > 10 && (
+              <button
+                onClick={() => openModal('expiring')}
+                className="text-xs text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1"
+              >
+                Ver más
+                <ExternalLink className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
           <div className="space-y-3 max-h-[420px] overflow-y-auto">
             {data.products.expiring.length === 0 ? (
@@ -535,129 +667,66 @@ export default function DashboardPage() {
                 <p className="text-sm">No hay productos próximos a vencer</p>
               </div>
             ) : (
-              data.products.expiring.map((product) => {
-                const isUrgent = product.daysUntilExpiration <= 7;
-                const isWarning = product.daysUntilExpiration > 7 && product.daysUntilExpiration <= 15;
-
-                return (
-                  <div
-                    key={`${product.id}-${product.lotName}`}
-                    className={`flex items-center justify-between p-3 rounded-lg border ${
-                      isUrgent
-                        ? 'bg-red-50 border-red-200'
-                        : isWarning
-                        ? 'bg-orange-50 border-orange-200'
-                        : 'bg-yellow-50 border-yellow-200'
-                    }`}
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-gray-900 truncate text-sm md:text-base">
-                        {product.name}
-                      </p>
-                      <p className="text-xs text-gray-600">
-                        Lote: {product.lotName}
-                      </p>
-                      <p className="text-xs text-gray-600 mt-1">
-                        {new Date(product.expirationDate).toLocaleDateString('es-ES', { timeZone: 'America/Buenos_Aires' })}
-                      </p>
-                    </div>
-                    <div className="text-right ml-3">
-                      <p className={`text-lg font-bold ${
-                        isUrgent
-                          ? 'text-red-600'
-                          : isWarning
-                          ? 'text-orange-600'
-                          : 'text-yellow-600'
-                      }`}>
-                        {product.daysUntilExpiration}
-                      </p>
-                      <p className="text-xs text-gray-600">
-                        {product.daysUntilExpiration === 1 ? 'día' : 'días'}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {product.totalQty} u.
-                      </p>
-                    </div>
-                  </div>
-                );
-              })
+              data.products.expiring.slice(0, 10).map((product) => renderExpiringItem(product))
             )}
           </div>
         </div>
         {/* Productos Más Vendidos */}
         <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6">
-          <div className="flex items-center gap-3 mb-4 md:mb-6">
-            <div className="w-9 h-9 md:w-10 md:h-10 bg-green-100 rounded-lg flex items-center justify-center">
-              <TrendingUp className="w-4 h-4 md:w-5 md:h-5 text-green-600" />
+          <div className="flex items-center justify-between mb-4 md:mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 md:w-10 md:h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                <TrendingUp className="w-4 h-4 md:w-5 md:h-5 text-green-600" />
+              </div>
+              <div>
+                <h3 className="text-base md:text-lg text-gray-900">
+                  Productos Más Vendidos
+                </h3>
+                <p className="text-xs md:text-sm text-gray-600">Últimos 30 días</p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-base md:text-lg text-gray-900">
-                Productos Más Vendidos
-              </h3>
-              <p className="text-xs md:text-sm text-gray-600">Últimos 30 días</p>
-            </div>
+            {data.products.topSelling.length > 10 && (
+              <button
+                onClick={() => openModal('topSelling')}
+                className="text-xs text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1"
+              >
+                Ver más
+                <ExternalLink className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
           <div className="space-y-3 max-h-[420px] overflow-y-auto">
-            {data.products.topSelling.map((product, idx) => (
-              <div
-                key={product.id}
-                className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-              >
-                <div className={`w-7 h-7 md:w-8 md:h-8 text-white rounded-full flex items-center justify-center font-bold text-xs md:text-sm ${
-                  product.qty_available < 3
-                    ? 'bg-red-600'
-                    : product.qty_available < 5
-                    ? 'bg-orange-500'
-                    : 'bg-green-600'
-                }`}>
-                  {idx + 1}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-gray-900 truncate text-sm md:text-base">
-                    {product.name}
-                  </p>
-                  <p className="text-xs md:text-sm text-gray-600">
-                    {formatNumber(product.totalQty)} vendidas · {formatNumber(product.qty_available)} en stock
-                  </p>
-                </div>
-              </div>
-            ))}
+            {data.products.topSelling.slice(0, 10).map((product, idx) => renderTopSellingItem(product, idx + 1))}
           </div>
         </div>
 
         {/* Productos con Bajas Ventas */}
         <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6">
-          <div className="flex items-center gap-3 mb-4 md:mb-6">
-            <div className="w-9 h-9 md:w-10 md:h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-              <TrendingDown className="w-4 h-4 md:w-5 md:h-5 text-gray-600" />
+          <div className="flex items-center justify-between mb-4 md:mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 md:w-10 md:h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                <TrendingDown className="w-4 h-4 md:w-5 md:h-5 text-gray-600" />
+              </div>
+              <div>
+                <h3 className="text-base md:text-lg text-gray-900">
+                  Productos con Bajas Ventas
+                </h3>
+                <p className="text-xs md:text-sm text-gray-600">Mayor stock sin ventas recientes</p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-base md:text-lg text-gray-900">
-                Productos con Bajas Ventas
-              </h3>
-              <p className="text-xs md:text-sm text-gray-600">Mayor stock sin ventas recientes</p>
-            </div>
+            {data.products.slowMoving && data.products.slowMoving.length > 10 && (
+              <button
+                onClick={() => openModal('slowMoving')}
+                className="text-xs text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1"
+              >
+                Ver más
+                <ExternalLink className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
           <div className="space-y-3 max-h-[420px] overflow-y-auto">
             {data.products.slowMoving && data.products.slowMoving.length > 0 ? (
-              data.products.slowMoving.map((product, idx) => (
-                <div
-                  key={product.id}
-                  className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                >
-                  <div className="w-7 h-7 md:w-8 md:h-8 bg-gray-400 text-white rounded-full flex items-center justify-center font-bold text-xs md:text-sm">
-                    {idx + 1}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900 truncate text-sm md:text-base">
-                      {product.name}
-                    </p>
-                    <p className="text-xs md:text-sm text-gray-600">
-                      {formatNumber(product.totalQty)} vendidas · {formatNumber(product.qty_available)} en stock
-                    </p>
-                  </div>
-                </div>
-              ))
+              data.products.slowMoving.slice(0, 10).map((product, idx) => renderSlowMovingItem(product, idx + 1))
             ) : (
               <div className="text-center py-6 md:py-8 text-gray-500">
                 <Package className="w-10 h-10 md:w-12 md:h-12 mx-auto mb-3 text-gray-300" />
@@ -667,6 +736,69 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Modal Ver Más */}
+      {modalType && (() => {
+        const config = getModalConfig();
+        if (!config) return null;
+        const allItems = config.items;
+        const totalItems = allItems.length;
+        const totalPages = Math.ceil(totalItems / MODAL_PAGE_SIZE);
+        const start = (modalPage - 1) * MODAL_PAGE_SIZE;
+        const pageItems = allItems.slice(start, start + MODAL_PAGE_SIZE);
+
+        return (
+          <Modal
+            isOpen={!!modalType}
+            onClose={closeModal}
+            title={config.title}
+            subtitle={`${config.subtitle} · ${totalItems} productos`}
+            icon={config.icon}
+          >
+            <div className="space-y-3">
+              {modalType === 'expiring' &&
+                (pageItems as DashboardData['products']['expiring']).map((product) =>
+                  renderExpiringItem(product)
+                )}
+              {modalType === 'topSelling' &&
+                (pageItems as DashboardData['products']['topSelling']).map((product, idx) =>
+                  renderTopSellingItem(product, start + idx + 1)
+                )}
+              {modalType === 'slowMoving' &&
+                (pageItems as DashboardData['products']['slowMoving']).map((product, idx) =>
+                  renderSlowMovingItem(product, start + idx + 1)
+                )}
+            </div>
+
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between pt-4 mt-4 border-t border-gray-200">
+                <span className="text-sm text-gray-500">
+                  {start + 1}-{Math.min(start + MODAL_PAGE_SIZE, totalItems)} de {totalItems}
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setModalPage((p) => Math.max(1, p - 1))}
+                    disabled={modalPage === 1}
+                    className="p-1.5 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  <span className="text-sm font-medium text-gray-700">
+                    {modalPage} / {totalPages}
+                  </span>
+                  <button
+                    onClick={() => setModalPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={modalPage === totalPages}
+                    className="p-1.5 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+            )}
+          </Modal>
+        );
+      })()}
 
       {/* Accesos Rápidos */}
       <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6">
