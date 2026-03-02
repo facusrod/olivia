@@ -655,8 +655,7 @@ export default function DashboardPage() {
                 onClick={() => openModal('expiring')}
                 className="text-xs text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1"
               >
-                Ver más
-                <ExternalLink className="w-3.5 h-3.5" />
+                <ArrowUpRight className="w-4 h-4" />
               </button>
             )}
           </div>
@@ -690,8 +689,7 @@ export default function DashboardPage() {
                 onClick={() => openModal('topSelling')}
                 className="text-xs text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1"
               >
-                Ver más
-                <ExternalLink className="w-3.5 h-3.5" />
+                <ArrowUpRight className="w-4 h-4" />
               </button>
             )}
           </div>
@@ -719,8 +717,7 @@ export default function DashboardPage() {
                 onClick={() => openModal('slowMoving')}
                 className="text-xs text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1"
               >
-                Ver más
-                <ExternalLink className="w-3.5 h-3.5" />
+                <ArrowUpRight className="w-4 h-4" />
               </button>
             )}
           </div>
@@ -775,23 +772,23 @@ export default function DashboardPage() {
                 <span className="text-sm text-gray-500">
                   {start + 1}-{Math.min(start + MODAL_PAGE_SIZE, totalItems)} de {totalItems}
                 </span>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
                   <button
                     onClick={() => setModalPage((p) => Math.max(1, p - 1))}
                     disabled={modalPage === 1}
-                    className="p-1.5 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                    className="p-1.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
                   >
-                    <ChevronLeft className="w-5 h-5" />
+                    <ChevronLeft className="w-4 h-4" />
                   </button>
-                  <span className="text-sm font-medium text-gray-700">
+                  <span className="text-sm font-medium text-gray-700 px-2">
                     {modalPage} / {totalPages}
                   </span>
                   <button
                     onClick={() => setModalPage((p) => Math.min(totalPages, p + 1))}
                     disabled={modalPage === totalPages}
-                    className="p-1.5 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                    className="p-1.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
                   >
-                    <ChevronRight className="w-5 h-5" />
+                    <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>
               </div>
