@@ -25,9 +25,17 @@ export async function GET(
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
 
-    const lines = await odoo.getEcommerceOrderLines(orderId);
+    // Fetch order lines + shipping address in parallel
+    const shippingPartnerId = order.partner_shipping_id
+      ? order.partner_shipping_id[0]
+      : order.partner_id[0];
 
-    return NextResponse.json({ order, lines });
+    const [lines, shippingAddress] = await Promise.all([
+      odoo.getEcommerceOrderLines(orderId),
+      odoo.getPartnerAddress(shippingPartnerId),
+    ]);
+
+    return NextResponse.json({ order, lines, shippingAddress });
   } catch (error: any) {
     console.error('Order detail API error:', error);
     return NextResponse.json(

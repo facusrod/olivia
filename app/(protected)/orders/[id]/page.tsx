@@ -11,6 +11,7 @@ import {
   FileText,
   Package,
   Clock,
+  Phone,
 } from 'lucide-react';
 
 interface OrderDetail {
@@ -22,8 +23,21 @@ interface OrderDetail {
   commitment_date: string | false;
   amount_total: number;
   state: string;
+  delivery_status: string | false;
   website_id: [number, string] | false;
   note: string | false;
+}
+
+interface ShippingAddress {
+  name: string;
+  street: string | false;
+  street2: string | false;
+  city: string | false;
+  state_id: [number, string] | false;
+  zip: string | false;
+  country_id: [number, string] | false;
+  phone: string | false;
+  mobile: string | false;
 }
 
 interface OrderLine {
@@ -35,15 +49,26 @@ interface OrderLine {
   price_subtotal: number;
 }
 
-const getStateBadge = (state: string) => {
+const getPaymentBadge = (state: string) => {
   const map: Record<string, { label: string; color: string }> = {
     draft: { label: 'Borrador', color: 'text-gray-600 bg-gray-100' },
-    sent: { label: 'Sin Pagar', color: 'text-orange-700 bg-orange-50' },
-    sale: { label: 'Pagado', color: 'text-green-700 bg-green-50' },
-    done: { label: 'Completado', color: 'text-blue-600 bg-blue-50' },
-    cancel: { label: 'Cancelado', color: 'text-red-600 bg-red-50' },
+    sent: { label: 'Sin Pagar', color: 'text-orange-700 bg-orange-100' },
+    sale: { label: 'Pagado', color: 'text-green-700 bg-green-100' },
+    done: { label: 'Cerrado', color: 'text-blue-600 bg-blue-100' },
+    cancel: { label: 'Cancelado', color: 'text-red-600 bg-red-100' },
   };
   return map[state] || { label: state, color: 'text-gray-600 bg-gray-100' };
+};
+
+const getDeliveryBadge = (deliveryStatus: string | false) => {
+  if (!deliveryStatus || deliveryStatus === 'no') {
+    return { label: 'No Enviado', color: 'text-gray-500 bg-gray-100' };
+  }
+  const map: Record<string, { label: string; color: string }> = {
+    partial: { label: 'Envío Parcial', color: 'text-amber-700 bg-amber-100' },
+    full: { label: 'Enviado', color: 'text-green-700 bg-green-100' },
+  };
+  return map[deliveryStatus] || { label: deliveryStatus, color: 'text-gray-500 bg-gray-100' };
 };
 
 const formatCurrency = (value: number) =>
@@ -54,9 +79,39 @@ const formatCurrency = (value: number) =>
     maximumFractionDigits: 2,
   }).format(value);
 
+/**
+ * Limpia el HTML de las notas del ecommerce.
+ * Si solo contiene un link a términos y condiciones, retorna null.
+ */
+const cleanNote = (note: string | false): string | null => {
+  if (!note) return null;
+  // Eliminar tags HTML
+  const stripped = note.replace(/<[^>]*>/g, '').trim();
+  // Filtrar si es solo términos y condiciones u otros textos genéricos vacíos
+  if (!stripped) return null;
+  if (/^(terms\s*(and|&|y)\s*conditions|términos\s*y\s*condiciones)/i.test(stripped)) return null;
+  return stripped;
+};
+
+const formatAddress = (addr: ShippingAddress): string[] => {
+  const lines: string[] = [];
+  if (addr.street) lines.push(addr.street);
+  if (addr.street2) lines.push(addr.street2);
+
+  const cityParts: string[] = [];
+  if (addr.city) cityParts.push(addr.city);
+  if (addr.state_id) cityParts.push(addr.state_id[1]);
+  if (addr.zip) cityParts.push(`CP ${addr.zip}`);
+  if (cityParts.length > 0) lines.push(cityParts.join(', '));
+
+  if (addr.country_id) lines.push(addr.country_id[1]);
+  return lines;
+};
+
 export default function OrderDetailPage() {
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [lines, setLines] = useState<OrderLine[]>([]);
+  const [shippingAddr, setShippingAddr] = useState<ShippingAddress | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -85,6 +140,7 @@ export default function OrderDetailPage() {
       const data = await response.json();
       setOrder(data.order);
       setLines(data.lines);
+      setShippingAddr(data.shippingAddress || null);
     } catch (err) {
       console.error('Error:', err);
       setError('Error al cargar el detalle del pedido');
@@ -118,10 +174,11 @@ export default function OrderDetailPage() {
     );
   }
 
-  const badge = getStateBadge(order.state);
-  const shippingAddress = order.partner_shipping_id
-    ? order.partner_shipping_id[1]
-    : order.partner_id[1];
+  const payment = getPaymentBadge(order.state);
+  const delivery = getDeliveryBadge(order.delivery_status);
+  const addressLines = shippingAddr ? formatAddress(shippingAddr) : [];
+  const contactPhone = shippingAddr?.mobile || shippingAddr?.phone || null;
+  const cleanedNote = cleanNote(order.note);
 
   return (
     <div className="p-4 md:p-6 space-y-4 md:space-y-6">
@@ -135,16 +192,19 @@ export default function OrderDetailPage() {
       </button>
 
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl md:text-2xl text-gray-900">{order.name}</h1>
           <p className="text-sm md:text-base text-gray-600 mt-1">Detalle del pedido</p>
         </div>
-        <span
-          className={`px-3 py-1.5 md:px-4 md:py-2 text-xs md:text-sm font-semibold rounded-full ${badge.color}`}
-        >
-          {badge.label}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className={`px-3 py-1.5 text-xs md:text-sm font-semibold rounded-full ${payment.color}`}>
+            {payment.label}
+          </span>
+          <span className={`px-3 py-1.5 text-xs md:text-sm font-semibold rounded-full ${delivery.color}`}>
+            {delivery.label}
+          </span>
+        </div>
       </div>
 
       {/* Grid de información */}
@@ -202,11 +262,26 @@ export default function OrderDetailPage() {
             </div>
             <h3 className="text-base md:text-lg text-gray-900">Dirección de Envío</h3>
           </div>
-          <p className="text-sm md:text-base text-gray-700">{shippingAddress}</p>
+          {shippingAddr ? (
+            <div className="space-y-1.5">
+              <p className="text-sm md:text-base text-gray-900 font-medium">{shippingAddr.name}</p>
+              {addressLines.map((line, i) => (
+                <p key={i} className="text-sm text-gray-600">{line}</p>
+              ))}
+              {contactPhone && (
+                <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-gray-100">
+                  <Phone className="w-3.5 h-3.5 text-gray-400" />
+                  <span className="text-sm text-gray-600">{contactPhone}</span>
+                </div>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500">Sin dirección de envío</p>
+          )}
         </div>
 
         {/* Notas */}
-        {order.note && (
+        {cleanedNote && (
           <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6">
             <div className="flex items-center gap-3 mb-3 md:mb-4">
               <div className="w-9 h-9 md:w-10 md:h-10 bg-orange-100 rounded-lg flex items-center justify-center">
@@ -214,7 +289,7 @@ export default function OrderDetailPage() {
               </div>
               <h3 className="text-base md:text-lg text-gray-900">Notas del Cliente</h3>
             </div>
-            <p className="text-sm md:text-base text-gray-700 whitespace-pre-wrap">{order.note}</p>
+            <p className="text-sm md:text-base text-gray-700 whitespace-pre-wrap">{cleanedNote}</p>
           </div>
         )}
       </div>

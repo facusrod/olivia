@@ -390,6 +390,33 @@ class OdooClient {
   }
 
   /**
+   * Obtiene la dirección completa de un partner (cliente/dirección de envío).
+   */
+  async getPartnerAddress(partnerId: number): Promise<{
+    name: string;
+    street: string | false;
+    street2: string | false;
+    city: string | false;
+    state_id: [number, string] | false;
+    zip: string | false;
+    country_id: [number, string] | false;
+    phone: string | false;
+    mobile: string | false;
+  } | null> {
+    const partners = await this.executeKw('res.partner', 'search_read', [
+      [['id', '=', partnerId]],
+    ], {
+      fields: [
+        'name', 'street', 'street2', 'city',
+        'state_id', 'zip', 'country_id',
+        'phone', 'mobile',
+      ],
+      limit: 1,
+    });
+    return partners.length > 0 ? partners[0] : null;
+  }
+
+  /**
    * Obtiene las líneas de un pedido con detalle de producto.
    */
   async getEcommerceOrderLines(orderId: number): Promise<OdooEcommerceOrderLine[]> {
