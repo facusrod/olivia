@@ -207,6 +207,7 @@ export default function DashboardPage() {
       month: 'short',
       hour: '2-digit',
       minute: '2-digit',
+      timeZone: 'America/Buenos_Aires',
     });
 
     return { dotClass, text, dateShort };
@@ -254,6 +255,7 @@ export default function DashboardPage() {
       month: 'short',
       hour: '2-digit',
       minute: '2-digit',
+      timeZone: 'America/Buenos_Aires',
     });
 
     return { dotClass, textClass, rowClass, text, dateShort };
@@ -556,7 +558,7 @@ export default function DashboardPage() {
                         Lote: {product.lotName}
                       </p>
                       <p className="text-xs text-gray-600 mt-1">
-                        {new Date(product.expirationDate).toLocaleDateString('es-ES')}
+                        {new Date(product.expirationDate).toLocaleDateString('es-ES', { timeZone: 'America/Buenos_Aires' })}
                       </p>
                     </div>
                     <div className="text-right ml-3">

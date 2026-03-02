@@ -242,6 +242,7 @@ export default function OrdersPage() {
                           month: '2-digit',
                           hour: '2-digit',
                           minute: '2-digit',
+                          timeZone: 'America/Buenos_Aires',
                         })}
                       </div>
                       <p className="font-semibold text-gray-900 text-sm">
@@ -308,6 +309,7 @@ export default function OrdersPage() {
                               year: 'numeric',
                               hour: '2-digit',
                               minute: '2-digit',
+                              timeZone: 'America/Buenos_Aires',
                             })}
                           </div>
                         </td>

@@ -8,7 +8,6 @@ import {
   User,
   Calendar,
   MapPin,
-  FileText,
   Package,
   Clock,
   Phone,
@@ -25,7 +24,6 @@ interface OrderDetail {
   state: string;
   delivery_status: string | false;
   website_id: [number, string] | false;
-  note: string | false;
 }
 
 interface ShippingAddress {
@@ -78,20 +76,6 @@ const formatCurrency = (value: number) =>
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(value);
-
-/**
- * Limpia el HTML de las notas del ecommerce.
- * Si solo contiene un link a términos y condiciones, retorna null.
- */
-const cleanNote = (note: string | false): string | null => {
-  if (!note) return null;
-  // Eliminar tags HTML
-  const stripped = note.replace(/<[^>]*>/g, '').trim();
-  // Filtrar si es solo términos y condiciones u otros textos genéricos vacíos
-  if (!stripped) return null;
-  if (/^(terms\s*(and|&|y)\s*conditions|términos\s*y\s*condiciones)/i.test(stripped)) return null;
-  return stripped;
-};
 
 const formatAddress = (addr: ShippingAddress): string[] => {
   const lines: string[] = [];
@@ -178,7 +162,6 @@ export default function OrderDetailPage() {
   const delivery = getDeliveryBadge(order.delivery_status);
   const addressLines = shippingAddr ? formatAddress(shippingAddr) : [];
   const contactPhone = shippingAddr?.mobile || shippingAddr?.phone || null;
-  const cleanedNote = cleanNote(order.note);
 
   return (
     <div className="p-4 md:p-6 space-y-4 md:space-y-6">
@@ -209,7 +192,7 @@ export default function OrderDetailPage() {
 
       {/* Grid de información */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-        {/* Cliente */}
+        {/* Cliente y Fecha */}
         <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6">
           <div className="flex items-center gap-3 mb-3 md:mb-4">
             <div className="w-9 h-9 md:w-10 md:h-10 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -217,20 +200,10 @@ export default function OrderDetailPage() {
             </div>
             <h3 className="text-base md:text-lg text-gray-900">Cliente</h3>
           </div>
-          <p className="text-sm md:text-base text-gray-700 font-medium">{order.partner_id[1]}</p>
-        </div>
-
-        {/* Fechas */}
-        <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6">
-          <div className="flex items-center gap-3 mb-3 md:mb-4">
-            <div className="w-9 h-9 md:w-10 md:h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-              <Calendar className="w-4 h-4 md:w-5 md:h-5 text-purple-600" />
-            </div>
-            <h3 className="text-base md:text-lg text-gray-900">Fechas</h3>
-          </div>
-          <div className="space-y-2">
+          <p className="text-sm md:text-base text-gray-900 font-medium">{order.partner_id[1]}</p>
+          <div className="mt-3 pt-3 border-t border-gray-100 space-y-1.5">
             <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-gray-400 flex-shrink-0" />
+              <Clock className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
               <span className="text-xs md:text-sm text-gray-600">Pedido:</span>
               <span className="text-xs md:text-sm text-gray-900 font-medium">
                 {new Date(order.date_order).toLocaleString('es-ES', {
@@ -239,15 +212,18 @@ export default function OrderDetailPage() {
                   year: 'numeric',
                   hour: '2-digit',
                   minute: '2-digit',
+                  timeZone: 'America/Buenos_Aires',
                 })}
               </span>
             </div>
             {order.commitment_date && (
               <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                <Calendar className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
                 <span className="text-xs md:text-sm text-gray-600">Entrega:</span>
                 <span className="text-xs md:text-sm text-gray-900 font-medium">
-                  {new Date(order.commitment_date).toLocaleDateString('es-ES')}
+                  {new Date(order.commitment_date).toLocaleDateString('es-ES', {
+                    timeZone: 'America/Buenos_Aires',
+                  })}
                 </span>
               </div>
             )}
@@ -280,18 +256,6 @@ export default function OrderDetailPage() {
           )}
         </div>
 
-        {/* Notas */}
-        {cleanedNote && (
-          <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6">
-            <div className="flex items-center gap-3 mb-3 md:mb-4">
-              <div className="w-9 h-9 md:w-10 md:h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-                <FileText className="w-4 h-4 md:w-5 md:h-5 text-orange-600" />
-              </div>
-              <h3 className="text-base md:text-lg text-gray-900">Notas del Cliente</h3>
-            </div>
-            <p className="text-sm md:text-base text-gray-700 whitespace-pre-wrap">{cleanedNote}</p>
-          </div>
-        )}
       </div>
 
       {/* Productos del pedido */}
