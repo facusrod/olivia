@@ -20,6 +20,7 @@ import {
   ClipboardList,
   Store,
   Globe,
+  ExternalLink,
 } from 'lucide-react';
 
 interface DashboardData {
@@ -60,14 +61,34 @@ interface DashboardData {
   updatedAt: string;
 }
 
+interface PendingOrder {
+  id: number;
+  name: string;
+  partner_id: [number, string];
+  date_order: string;
+  amount_total: number;
+  state: string;
+}
+
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [pendingOrders, setPendingOrders] = useState<PendingOrder[]>([]);
+  const [pendingLoading, setPendingLoading] = useState(true);
+  const [pendingSummary, setPendingSummary] = useState<{ pendingCount: number; totalPendingAmount: number } | null>(null);
+  const [, setTick] = useState(0);
   const router = useRouter();
 
   useEffect(() => {
     loadDashboard();
+    loadPendingOrders();
+  }, []);
+
+  // Auto-refresh urgency indicators every 60s
+  useEffect(() => {
+    const interval = setInterval(() => setTick(n => n + 1), 60000);
+    return () => clearInterval(interval);
   }, []);
 
   // GET - Carga el último snapshot guardado
@@ -90,15 +111,32 @@ export default function DashboardPage() {
   const refreshDashboard = async () => {
     try {
       setRefreshing(true);
-      const response = await fetch('/api/dashboard', { method: 'POST' });
-      if (!response.ok) throw new Error('Error al actualizar dashboard');
-
-      const result = await response.json();
+      const [dashRes] = await Promise.all([
+        fetch('/api/dashboard', { method: 'POST' }),
+        loadPendingOrders(),
+      ]);
+      if (!dashRes.ok) throw new Error('Error al actualizar dashboard');
+      const result = await dashRes.json();
       setData(result);
     } catch (error) {
       console.error('Error:', error);
     } finally {
       setRefreshing(false);
+    }
+  };
+
+  const loadPendingOrders = async () => {
+    try {
+      setPendingLoading(true);
+      const response = await fetch('/api/orders?state=sent,sale&limit=5');
+      if (!response.ok) throw new Error('Error al cargar pedidos');
+      const result = await response.json();
+      setPendingOrders(result.orders);
+      setPendingSummary(result.summary);
+    } catch (error) {
+      console.error('Error pedidos:', error);
+    } finally {
+      setPendingLoading(false);
     }
   };
 
@@ -165,6 +203,61 @@ export default function DashboardPage() {
     });
 
     return { dotClass, text, dateShort };
+  };
+
+  const getOrderUrgency = (dateOrder: string) => {
+    const now = new Date();
+    const created = new Date(dateOrder);
+    const diffMs = now.getTime() - created.getTime();
+    const diffMin = Math.floor(diffMs / 60000);
+
+    let dotClass: string;
+    let textClass: string;
+    let rowClass: string;
+    if (diffMin < 15) {
+      dotClass = 'bg-green-500';
+      textClass = 'text-green-700';
+      rowClass = 'bg-gray-50 border-gray-100';
+    } else if (diffMin < 30) {
+      dotClass = 'bg-orange-500';
+      textClass = 'text-orange-700';
+      rowClass = 'bg-orange-50 border-orange-200';
+    } else {
+      dotClass = 'bg-red-500';
+      textClass = 'text-red-700';
+      rowClass = 'bg-red-50 border-red-200';
+    }
+
+    let text: string;
+    if (diffMin < 1) {
+      text = 'Justo ahora';
+    } else if (diffMin < 60) {
+      text = `hace ${diffMin} min`;
+    } else if (diffMin < 1440) {
+      const hours = Math.floor(diffMin / 60);
+      const mins = diffMin % 60;
+      text = `hace ${hours}h ${mins > 0 ? `${mins}min` : ''}`;
+    } else {
+      const days = Math.floor(diffMin / 1440);
+      text = `hace ${days}d`;
+    }
+
+    const dateShort = created.toLocaleDateString('es-ES', {
+      day: 'numeric',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    return { dotClass, textClass, rowClass, text, dateShort };
+  };
+
+  const getStateBadge = (state: string) => {
+    const map: Record<string, { label: string; color: string }> = {
+      sent: { label: 'Sin Pagar', color: 'text-orange-700 bg-orange-50 border border-orange-200' },
+      sale: { label: 'Pagado', color: 'text-green-700 bg-green-50 border border-green-200' },
+    };
+    return map[state] || { label: state, color: 'text-gray-600 bg-gray-100' };
   };
 
   const status = getUpdateStatus(data.updatedAt);
@@ -305,6 +398,95 @@ export default function DashboardPage() {
             {formatNumber(data.inventory.totalProducts || 0)} productos · {data.inventory.outOfStock} agotados
           </p>
         </div>
+      </div>
+
+      {/* Pedidos Pendientes */}
+      <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 md:w-10 md:h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+              <ClipboardList className="w-4 h-4 md:w-5 md:h-5 text-orange-600" />
+            </div>
+            <div>
+              <h3 className="text-base md:text-lg text-gray-900">
+                Pedidos Pendientes
+              </h3>
+              <p className="text-xs md:text-sm text-gray-600">Requieren tu atención</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            {pendingSummary && pendingSummary.pendingCount > 0 && (
+              <span className="text-xs md:text-sm text-gray-500 hidden sm:inline">
+                {formatCurrency(pendingSummary.totalPendingAmount)}
+              </span>
+            )}
+            {pendingSummary && pendingSummary.pendingCount > 0 && (
+              <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+                pendingOrders.some(o => {
+                  const diff = Math.floor((Date.now() - new Date(o.date_order).getTime()) / 60000);
+                  return diff > 30;
+                })
+                  ? 'bg-red-100 text-red-700 animate-pulse'
+                  : 'bg-orange-100 text-orange-700'
+              }`}>
+                {pendingSummary.pendingCount}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {pendingLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+          </div>
+        ) : pendingOrders.length === 0 ? (
+          <div className="text-center py-6 text-gray-500">
+            <ClipboardList className="w-10 h-10 mx-auto mb-3 text-gray-300" />
+            <p className="text-sm">No hay pedidos pendientes</p>
+          </div>
+        ) : (
+          <>
+            <div className="space-y-2">
+              {pendingOrders.map((order) => {
+                const urgency = getOrderUrgency(order.date_order);
+                const badge = getStateBadge(order.state);
+
+                return (
+                  <div
+                    key={order.id}
+                    onClick={() => router.push(`/orders/${order.id}`)}
+                    className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer hover:shadow-sm transition-all ${urgency.rowClass}`}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-medium text-primary-700 text-sm">{order.name}</p>
+                        <span className={`inline-block px-2 py-0.5 text-xs font-semibold rounded-full ${badge.color}`}>
+                          {badge.label}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-700 truncate mt-0.5">{order.partner_id[1]}</p>
+                    </div>
+                    <div className="text-right ml-3 flex-shrink-0">
+                      <p className="font-semibold text-gray-900 text-sm">{formatCurrency(order.amount_total)}</p>
+                      <div className="flex items-center gap-1.5 justify-end mt-1">
+                        <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${urgency.dotClass}`} />
+                        <span className={`text-xs font-medium ${urgency.textClass}`}>{urgency.text}</span>
+                        <span className="text-xs text-gray-400 hidden sm:inline">· {urgency.dateShort}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <button
+              onClick={() => router.push('/orders')}
+              className="w-full mt-4 py-2.5 text-sm font-semibold text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded-lg transition-colors flex items-center justify-center gap-2"
+            >
+              Ver todos los pedidos
+              <ExternalLink className="w-3.5 h-3.5" />
+            </button>
+          </>
+        )}
       </div>
 
       {/* Grid de 3 columnas para productos */}
