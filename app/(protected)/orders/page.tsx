@@ -60,7 +60,7 @@ const formatCurrency = (value: number) =>
     maximumFractionDigits: 0,
   }).format(value);
 
-type TabFilter = 'sent' | 'sale' | 'done' | 'all';
+type TabFilter = 'sent' | 'sale' | 'all';
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<EcommerceOrder[]>([]);
@@ -114,7 +114,6 @@ export default function OrdersPage() {
   const tabs: { key: TabFilter; label: string }[] = [
     { key: 'sent', label: 'Sin Pagar' },
     { key: 'sale', label: 'Confirmados' },
-    { key: 'done', label: 'Completados' },
     { key: 'all', label: 'Todos' },
   ];
 
@@ -205,7 +204,7 @@ export default function OrdersPage() {
         ) : orders.length === 0 ? (
           <div className="px-6 py-12 text-center text-gray-500">
             <ShoppingCart className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-            <p>No hay pedidos {activeTab === 'sent' ? 'sin pagar' : activeTab === 'sale' ? 'confirmados' : activeTab === 'done' ? 'completados' : ''}</p>
+            <p>No hay pedidos {activeTab === 'sent' ? 'sin pagar' : activeTab === 'sale' ? 'confirmados' : ''}</p>
           </div>
         ) : (
           <>
