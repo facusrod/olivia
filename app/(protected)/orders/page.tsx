@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   ShoppingCart,
-  DollarSign,
   Calendar,
   Loader2,
   ChevronLeft,
@@ -26,7 +25,6 @@ interface EcommerceOrder {
 
 interface Summary {
   pendingCount: number;
-  totalPendingAmount: number;
   todayCount: number;
 }
 
@@ -137,7 +135,7 @@ export default function OrdersPage() {
 
       {/* Tarjetas resumen */}
       {summary && (
-        <div className="grid grid-cols-3 gap-3 md:gap-6">
+        <div className="grid grid-cols-2 gap-3 md:gap-6">
           <div className="bg-white rounded-xl border border-gray-200 p-3 md:p-6 hover:shadow-lg transition-shadow">
             <div className="flex items-center justify-between mb-2 md:mb-4">
               <div className="w-9 h-9 md:w-12 md:h-12 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -150,19 +148,6 @@ export default function OrdersPage() {
             <h3 className="text-xs md:text-sm font-medium text-gray-600 mb-1">Pendientes</h3>
             <p className="text-xl md:text-3xl text-gray-900">{summary.pendingCount}</p>
             <p className="text-xs text-gray-500 mt-1 md:mt-2 hidden sm:block">Sin pagar + por preparar</p>
-          </div>
-
-          <div className="bg-white rounded-xl border border-gray-200 p-3 md:p-6 hover:shadow-lg transition-shadow">
-            <div className="flex items-center justify-between mb-2 md:mb-4">
-              <div className="w-9 h-9 md:w-12 md:h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <DollarSign className="w-4 h-4 md:w-6 md:h-6 text-green-600" />
-              </div>
-            </div>
-            <h3 className="text-xs md:text-sm font-medium text-gray-600 mb-1">Monto Pend.</h3>
-            <p className="text-lg md:text-3xl text-gray-900">
-              {formatCurrency(summary.totalPendingAmount)}
-            </p>
-            <p className="text-xs text-gray-500 mt-1 md:mt-2 hidden sm:block">Sin pagar + confirmados</p>
           </div>
 
           <div className="bg-white rounded-xl border border-gray-200 p-3 md:p-6 hover:shadow-lg transition-shadow">
