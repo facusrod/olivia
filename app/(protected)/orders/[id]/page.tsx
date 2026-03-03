@@ -247,7 +247,14 @@ export default function OrderDetailPage() {
               {contactPhone && (
                 <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-gray-100">
                   <Phone className="w-3.5 h-3.5 text-gray-400" />
-                  <span className="text-sm text-gray-600">{contactPhone}</span>
+                  <a
+                    href={`https://wa.me/549${contactPhone.replace(/\D/g, '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-green-700 hover:text-green-800 hover:underline"
+                  >
+                    {contactPhone}
+                  </a>
                 </div>
               )}
             </div>
