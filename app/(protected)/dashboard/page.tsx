@@ -25,6 +25,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import Modal from '@/components/Modal';
+import { useUserRole } from '@/lib/useUserRole';
 
 interface DashboardData {
   sales: {
@@ -85,6 +86,7 @@ export default function DashboardPage() {
   const [modalType, setModalType] = useState<'expiring' | 'topSelling' | 'slowMoving' | null>(null);
   const [modalPage, setModalPage] = useState(1);
   const router = useRouter();
+  const { isAdmin } = useUserRole();
 
   useEffect(() => {
     loadDashboard();
@@ -403,6 +405,224 @@ export default function DashboardPage() {
     </div>
   );
 
+  // ── Tarjetas reutilizables ──
+
+  const ventasDiaCard = (
+    <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6 hover:shadow-lg transition-shadow">
+      <div className="flex items-center justify-between mb-3 md:mb-4">
+        <div className="w-10 h-10 md:w-12 md:h-12 bg-green-100 rounded-lg flex items-center justify-center">
+          <DollarSign className="w-5 h-5 md:w-6 md:h-6 text-green-600" />
+        </div>
+        <Calendar className="w-4 h-4 md:w-5 md:h-5 text-gray-400" />
+      </div>
+      <h3 className="text-xs md:text-sm font-medium text-gray-600 mb-1">Ventas del Día</h3>
+      <p className="text-xl md:text-3xl text-gray-900">
+        {formatCurrency(data.sales.today)}
+      </p>
+      <p className="text-xs md:text-sm text-gray-500 mt-1 md:mt-2">
+        {data.orders.today} órdenes hoy
+      </p>
+      {(data.orders.pos || data.orders.ecommerce) && (
+        <div className="flex items-center gap-3 mt-1 text-xs text-gray-400">
+          {data.orders.pos && (
+            <span className="flex items-center gap-1">
+              <Store className="w-3 h-3" />
+              {data.orders.pos.today} PDV
+            </span>
+          )}
+          {data.orders.ecommerce && (
+            <span className="flex items-center gap-1">
+              <Globe className="w-3 h-3" />
+              {data.orders.ecommerce.today} Web
+            </span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+
+  const ventasMesCard = (
+    <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6 hover:shadow-lg transition-shadow">
+      <div className="flex items-center justify-between mb-3 md:mb-4">
+        <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+          <BarChart3 className="w-5 h-5 md:w-6 md:h-6 text-blue-600" />
+        </div>
+        {data.sales.growthPercentage >= 0 ? (
+          <div className="flex items-center gap-1 text-green-600">
+            <ArrowUpRight className="w-4 h-4" />
+            <span className="text-xs md:text-sm font-semibold">
+              +{data.sales.growthPercentage.toFixed(1)}%
+            </span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1 text-red-600">
+            <ArrowDownRight className="w-4 h-4" />
+            <span className="text-xs md:text-sm font-semibold">
+              {data.sales.growthPercentage.toFixed(1)}%
+            </span>
+          </div>
+        )}
+      </div>
+      <h3 className="text-xs md:text-sm font-medium text-gray-600 mb-1">Ventas del Mes</h3>
+      <p className="text-xl md:text-3xl text-gray-900">
+        {formatCurrency(data.sales.month)}
+      </p>
+      <p className="text-xs md:text-sm text-gray-500 mt-1 md:mt-2">
+        vs {formatCurrency(data.sales.lastMonth)} mes anterior
+      </p>
+    </div>
+  );
+
+  const ticketPromedioCard = (
+    <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6 hover:shadow-lg transition-shadow">
+      <div className="flex items-center justify-between mb-3 md:mb-4">
+        <div className="w-10 h-10 md:w-12 md:h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+          <Receipt className="w-5 h-5 md:w-6 md:h-6 text-purple-600" />
+        </div>
+        <ShoppingCart className="w-4 h-4 md:w-5 md:h-5 text-gray-400" />
+      </div>
+      <h3 className="text-xs md:text-sm font-medium text-gray-600 mb-1">Ticket Promedio</h3>
+      <p className="text-xl md:text-3xl text-gray-900">
+        {formatCurrency(data.sales.averageTicket)}
+      </p>
+      <p className="text-xs md:text-sm text-gray-500 mt-1 md:mt-2">
+        {data.orders.month} órdenes este mes
+      </p>
+      {(data.orders.pos || data.orders.ecommerce) && (
+        <div className="flex items-center gap-3 mt-1 text-xs text-gray-400">
+          {data.orders.pos && (
+            <span className="flex items-center gap-1">
+              <Store className="w-3 h-3" />
+              {data.orders.pos.month} PDV
+            </span>
+          )}
+          {data.orders.ecommerce && (
+            <span className="flex items-center gap-1">
+              <Globe className="w-3 h-3" />
+              {data.orders.ecommerce.month} Web
+            </span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+
+  const valorInventarioCard = (
+    <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6 hover:shadow-lg transition-shadow">
+      <div className="flex items-center justify-between mb-3 md:mb-4">
+        <div className="w-10 h-10 md:w-12 md:h-12 bg-indigo-100 rounded-lg flex items-center justify-center">
+          <Package className="w-5 h-5 md:w-6 md:h-6 text-indigo-600" />
+        </div>
+        <div className="flex items-center gap-1">
+          {data.inventory.outOfStock > 0 && (
+            <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+          )}
+        </div>
+      </div>
+      <h3 className="text-xs md:text-sm font-medium text-gray-600 mb-1">Valor Inventario</h3>
+      <p className="text-xl md:text-3xl text-gray-900">
+        {formatCurrency(data.inventory.totalValue)}
+      </p>
+      <p className="text-xs md:text-sm text-gray-500 mt-1 md:mt-2">
+        {formatNumber(data.inventory.totalProducts || 0)} productos · {data.inventory.outOfStock} agotados
+      </p>
+    </div>
+  );
+
+  const pedidosPendientesCard = (
+    <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 md:w-10 md:h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+            <ClipboardList className="w-4 h-4 md:w-5 md:h-5 text-orange-600" />
+          </div>
+          <div>
+            <h3 className="text-base md:text-lg text-gray-900">
+              Pedidos Pendientes
+            </h3>
+            <p className="text-xs md:text-sm text-gray-600">Requieren tu atención</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          {pendingSummary && pendingSummary.pendingCount > 0 && (
+            <span className="text-xs md:text-sm text-gray-500 hidden sm:inline">
+              {formatCurrency(pendingSummary.totalPendingAmount)}
+            </span>
+          )}
+          {pendingSummary && pendingSummary.pendingCount > 0 && (
+            <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+              pendingOrders.some(o => {
+                const diff = Math.floor((Date.now() - new Date(o.date_order).getTime()) / 60000);
+                return diff > 30;
+              })
+                ? 'bg-red-100 text-red-700 animate-pulse'
+                : 'bg-orange-100 text-orange-700'
+            }`}>
+              {pendingSummary.pendingCount}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {pendingLoading ? (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+        </div>
+      ) : pendingOrders.length === 0 ? (
+        <div className="text-center py-6 text-gray-500">
+          <ClipboardList className="w-10 h-10 mx-auto mb-3 text-gray-300" />
+          <p className="text-sm">No hay pedidos pendientes</p>
+        </div>
+      ) : (
+        <>
+          <div className="space-y-2">
+            {pendingOrders.map((order) => {
+              const urgency = getOrderUrgency(order.date_order);
+              const payment = getPaymentBadge(order.state);
+              const delivery = getDeliveryBadge(order.delivery_status);
+
+              return (
+                <div
+                  key={order.id}
+                  onClick={() => router.push(`/orders/${order.id}`)}
+                  className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer hover:shadow-sm transition-all ${urgency.rowClass}`}
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <p className="font-medium text-primary-700 text-sm">{order.name}</p>
+                      <span className={`inline-block px-1.5 py-0.5 text-xs font-semibold rounded-full ${payment.color}`}>
+                        {payment.label}
+                      </span>
+                      <span className={`inline-block px-1.5 py-0.5 text-xs font-semibold rounded-full ${delivery.color}`}>
+                        {delivery.label}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-700 truncate mt-0.5">{order.partner_id[1]}</p>
+                  </div>
+                  <div className="text-right ml-3 flex-shrink-0">
+                    <p className="font-semibold text-gray-900 text-sm">{formatCurrency(order.amount_total)}</p>
+                    <div className="flex items-center gap-1.5 justify-end mt-1">
+                      <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${urgency.dotClass}`} />
+                      <span className={`text-xs font-medium ${urgency.textClass}`}>{urgency.text}</span>
+                      <span className="text-xs text-gray-400 hidden sm:inline">· {urgency.dateShort}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <button
+            onClick={() => router.push('/orders')}
+            className="w-full mt-4 py-2.5 text-sm font-semibold text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded-lg transition-colors flex items-center justify-center gap-2"
+          >
+            Ver todos los pedidos
+            <ExternalLink className="w-3.5 h-3.5" />
+          </button>
+        </>
+      )}
+    </div>
+  );
+
   return (
     <div className="p-4 md:p-6 space-y-4 md:space-y-6">
       {/* Status */}
@@ -420,219 +640,29 @@ export default function DashboardPage() {
         <span className="hidden sm:inline text-gray-400">· {status.dateShort}</span>
       </button>
 
-      {/* Métricas Principales - Ventas */}
-      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
-        {/* Ventas del Día */}
-        <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6 hover:shadow-lg transition-shadow">
-          <div className="flex items-center justify-between mb-3 md:mb-4">
-            <div className="w-10 h-10 md:w-12 md:h-12 bg-green-100 rounded-lg flex items-center justify-center">
-              <DollarSign className="w-5 h-5 md:w-6 md:h-6 text-green-600" />
-            </div>
-            <Calendar className="w-4 h-4 md:w-5 md:h-5 text-gray-400" />
+      {isAdmin ? (
+        <>
+          {/* Admin: 4 tarjetas + pedidos pendientes debajo */}
+          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
+            {ventasDiaCard}
+            {ventasMesCard}
+            {ticketPromedioCard}
+            {valorInventarioCard}
           </div>
-          <h3 className="text-xs md:text-sm font-medium text-gray-600 mb-1">Ventas del Día</h3>
-          <p className="text-xl md:text-3xl text-gray-900">
-            {formatCurrency(data.sales.today)}
-          </p>
-          <p className="text-xs md:text-sm text-gray-500 mt-1 md:mt-2">
-            {data.orders.today} órdenes hoy
-          </p>
-          {(data.orders.pos || data.orders.ecommerce) && (
-            <div className="flex items-center gap-3 mt-1 text-xs text-gray-400">
-              {data.orders.pos && (
-                <span className="flex items-center gap-1">
-                  <Store className="w-3 h-3" />
-                  {data.orders.pos.today} PDV
-                </span>
-              )}
-              {data.orders.ecommerce && (
-                <span className="flex items-center gap-1">
-                  <Globe className="w-3 h-3" />
-                  {data.orders.ecommerce.today} Web
-                </span>
-              )}
+          {pedidosPendientesCard}
+        </>
+      ) : (
+        <>
+          {/* User: tarjetas a la izquierda, pedidos a la derecha */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-6 lg:items-start">
+            <div className="grid grid-cols-2 gap-3 md:gap-6 content-start">
+              {ventasDiaCard}
+              {ticketPromedioCard}
             </div>
-          )}
-        </div>
-
-        {/* Ventas del Mes */}
-        <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6 hover:shadow-lg transition-shadow">
-          <div className="flex items-center justify-between mb-3 md:mb-4">
-            <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-              <BarChart3 className="w-5 h-5 md:w-6 md:h-6 text-blue-600" />
-            </div>
-            {data.sales.growthPercentage >= 0 ? (
-              <div className="flex items-center gap-1 text-green-600">
-                <ArrowUpRight className="w-4 h-4" />
-                <span className="text-xs md:text-sm font-semibold">
-                  +{data.sales.growthPercentage.toFixed(1)}%
-                </span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-1 text-red-600">
-                <ArrowDownRight className="w-4 h-4" />
-                <span className="text-xs md:text-sm font-semibold">
-                  {data.sales.growthPercentage.toFixed(1)}%
-                </span>
-              </div>
-            )}
+            {pedidosPendientesCard}
           </div>
-          <h3 className="text-xs md:text-sm font-medium text-gray-600 mb-1">Ventas del Mes</h3>
-          <p className="text-xl md:text-3xl text-gray-900">
-            {formatCurrency(data.sales.month)}
-          </p>
-          <p className="text-xs md:text-sm text-gray-500 mt-1 md:mt-2">
-            vs {formatCurrency(data.sales.lastMonth)} mes anterior
-          </p>
-        </div>
-
-        {/* Ticket Promedio */}
-        <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6 hover:shadow-lg transition-shadow">
-          <div className="flex items-center justify-between mb-3 md:mb-4">
-            <div className="w-10 h-10 md:w-12 md:h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-              <Receipt className="w-5 h-5 md:w-6 md:h-6 text-purple-600" />
-            </div>
-            <ShoppingCart className="w-4 h-4 md:w-5 md:h-5 text-gray-400" />
-          </div>
-          <h3 className="text-xs md:text-sm font-medium text-gray-600 mb-1">Ticket Promedio</h3>
-          <p className="text-xl md:text-3xl text-gray-900">
-            {formatCurrency(data.sales.averageTicket)}
-          </p>
-          <p className="text-xs md:text-sm text-gray-500 mt-1 md:mt-2">
-            {data.orders.month} órdenes este mes
-          </p>
-          {(data.orders.pos || data.orders.ecommerce) && (
-            <div className="flex items-center gap-3 mt-1 text-xs text-gray-400">
-              {data.orders.pos && (
-                <span className="flex items-center gap-1">
-                  <Store className="w-3 h-3" />
-                  {data.orders.pos.month} PDV
-                </span>
-              )}
-              {data.orders.ecommerce && (
-                <span className="flex items-center gap-1">
-                  <Globe className="w-3 h-3" />
-                  {data.orders.ecommerce.month} Web
-                </span>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Valor del Inventario */}
-        <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6 hover:shadow-lg transition-shadow">
-          <div className="flex items-center justify-between mb-3 md:mb-4">
-            <div className="w-10 h-10 md:w-12 md:h-12 bg-indigo-100 rounded-lg flex items-center justify-center">
-              <Package className="w-5 h-5 md:w-6 md:h-6 text-indigo-600" />
-            </div>
-            <div className="flex items-center gap-1">
-              {data.inventory.outOfStock > 0 && (
-                <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-              )}
-            </div>
-          </div>
-          <h3 className="text-xs md:text-sm font-medium text-gray-600 mb-1">Valor Inventario</h3>
-          <p className="text-xl md:text-3xl text-gray-900">
-            {formatCurrency(data.inventory.totalValue)}
-          </p>
-          <p className="text-xs md:text-sm text-gray-500 mt-1 md:mt-2">
-            {formatNumber(data.inventory.totalProducts || 0)} productos · {data.inventory.outOfStock} agotados
-          </p>
-        </div>
-      </div>
-
-      {/* Pedidos Pendientes */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 md:w-10 md:h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-              <ClipboardList className="w-4 h-4 md:w-5 md:h-5 text-orange-600" />
-            </div>
-            <div>
-              <h3 className="text-base md:text-lg text-gray-900">
-                Pedidos Pendientes
-              </h3>
-              <p className="text-xs md:text-sm text-gray-600">Requieren tu atención</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            {pendingSummary && pendingSummary.pendingCount > 0 && (
-              <span className="text-xs md:text-sm text-gray-500 hidden sm:inline">
-                {formatCurrency(pendingSummary.totalPendingAmount)}
-              </span>
-            )}
-            {pendingSummary && pendingSummary.pendingCount > 0 && (
-              <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
-                pendingOrders.some(o => {
-                  const diff = Math.floor((Date.now() - new Date(o.date_order).getTime()) / 60000);
-                  return diff > 30;
-                })
-                  ? 'bg-red-100 text-red-700 animate-pulse'
-                  : 'bg-orange-100 text-orange-700'
-              }`}>
-                {pendingSummary.pendingCount}
-              </span>
-            )}
-          </div>
-        </div>
-
-        {pendingLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
-          </div>
-        ) : pendingOrders.length === 0 ? (
-          <div className="text-center py-6 text-gray-500">
-            <ClipboardList className="w-10 h-10 mx-auto mb-3 text-gray-300" />
-            <p className="text-sm">No hay pedidos pendientes</p>
-          </div>
-        ) : (
-          <>
-            <div className="space-y-2">
-              {pendingOrders.map((order) => {
-                const urgency = getOrderUrgency(order.date_order);
-                const payment = getPaymentBadge(order.state);
-                const delivery = getDeliveryBadge(order.delivery_status);
-
-                return (
-                  <div
-                    key={order.id}
-                    onClick={() => router.push(`/orders/${order.id}`)}
-                    className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer hover:shadow-sm transition-all ${urgency.rowClass}`}
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <p className="font-medium text-primary-700 text-sm">{order.name}</p>
-                        <span className={`inline-block px-1.5 py-0.5 text-xs font-semibold rounded-full ${payment.color}`}>
-                          {payment.label}
-                        </span>
-                        <span className={`inline-block px-1.5 py-0.5 text-xs font-semibold rounded-full ${delivery.color}`}>
-                          {delivery.label}
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-700 truncate mt-0.5">{order.partner_id[1]}</p>
-                    </div>
-                    <div className="text-right ml-3 flex-shrink-0">
-                      <p className="font-semibold text-gray-900 text-sm">{formatCurrency(order.amount_total)}</p>
-                      <div className="flex items-center gap-1.5 justify-end mt-1">
-                        <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${urgency.dotClass}`} />
-                        <span className={`text-xs font-medium ${urgency.textClass}`}>{urgency.text}</span>
-                        <span className="text-xs text-gray-400 hidden sm:inline">· {urgency.dateShort}</span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            <button
-              onClick={() => router.push('/orders')}
-              className="w-full mt-4 py-2.5 text-sm font-semibold text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded-lg transition-colors flex items-center justify-center gap-2"
-            >
-              Ver todos los pedidos
-              <ExternalLink className="w-3.5 h-3.5" />
-            </button>
-          </>
-        )}
-      </div>
+        </>
+      )}
 
       {/* Grid de 3 columnas para productos */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">

@@ -34,7 +34,7 @@ if (!MONGODB_URI) {
 // Usuarios admin iniciales
 const ADMIN_USERS = [
   { email: 'frcuutn@gmail.com', name: 'Facundo Rodriguez', role: 'admin' },
-  { email: 'pontelli58@gmail.com', name: 'Pontelli', role: 'user' },
+  { email: 'pontelli58@gmail.com', name: 'Pontelli', role: 'admin' },
   { email: 'greenhouse.cdelu@gmail.com', name: 'Green House CdelU', role: 'user' }
 ];
 

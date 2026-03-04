@@ -50,6 +50,7 @@ export const authOptions: NextAuthOptions = {
           });
           if (dbUser) {
             token.dbId = dbUser._id.toString();
+            token.role = dbUser.role;
           }
         } catch (error) {
           console.error("Error in jwt callback:", error);
@@ -62,6 +63,7 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         session.user.id = token.sub || "";
         session.user.dbId = token.dbId || "";
+        session.user.role = token.role || "user";
       }
       return session;
     },
