@@ -39,6 +39,10 @@ export async function GET(req: NextRequest) {
 
     // Calcular métricas desde trulyPending (sin llamadas extra)
     const pendingCount = trulyPending.length;
+    const totalPendingAmount = trulyPending.reduce(
+      (sum, o) => sum + (o.amount_total || 0),
+      0
+    );
 
     // Pedidos de hoy (filtrar en JS, no otra llamada a Odoo)
     // Medianoche Argentina (UTC-3) = 03:00 UTC
@@ -70,6 +74,7 @@ export async function GET(req: NextRequest) {
       hasMore: orders.length === limit,
       summary: {
         pendingCount,
+        totalPendingAmount,
         todayCount,
       },
     });
