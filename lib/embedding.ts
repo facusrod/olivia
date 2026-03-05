@@ -1,21 +1,28 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import connectDB from './mongodb';
 import ProductEmbedding from '@/models/ProductEmbedding';
 import { getOdooClient } from './odoo';
 import type { OdooProduct } from './odoo';
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-
 class EmbeddingService {
-  private model;
-
-  constructor() {
-    this.model = genAI.getGenerativeModel({ model: 'embedding-001' });
-  }
-
   async embedText(text: string): Promise<number[]> {
-    const result = await this.model.embedContent(text);
-    return result.embedding.values;
+    const apiKey = process.env.GEMINI_API_KEY;
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1/models/text-embedding-004:embedContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'models/text-embedding-004',
+          content: { parts: [{ text }] },
+        }),
+      }
+    );
+    if (!response.ok) {
+      const err = await response.text();
+      throw new Error(`Embedding API error ${response.status}: ${err}`);
+    }
+    const data = await response.json();
+    return data.embedding.values;
   }
 
   async searchSimilarProducts(query: string, limit = 15): Promise<OdooProduct[]> {
