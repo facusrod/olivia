@@ -10,7 +10,7 @@ class EmbeddingService {
   private model;
 
   constructor() {
-    this.model = genAI.getGenerativeModel({ model: 'text-embedding-004' });
+    this.model = genAI.getGenerativeModel({ model: 'embedding-001' });
   }
 
   async embedText(text: string): Promise<number[]> {
