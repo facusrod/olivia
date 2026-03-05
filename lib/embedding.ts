@@ -77,7 +77,10 @@ class EmbeddingService {
       });
 
       try {
-        const embeddings = await Promise.all(texts.map((t) => this.embedText(t)));
+        const embeddings: number[][] = [];
+        for (const text of texts) {
+          embeddings.push(await this.embedText(text));
+        }
 
         const ops = chunk.map((p, idx) => ({
           updateOne: {
