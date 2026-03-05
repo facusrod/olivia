@@ -61,7 +61,13 @@ async function seed() {
   for (const admin of ADMIN_USERS) {
     const existing = await User.findOne({ email: admin.email });
     if (existing) {
-      console.log(`✓ ${admin.email} ya existe (role: ${existing.role}, active: ${existing.isActive})`);
+      if (existing.role !== admin.role) {
+        existing.role = admin.role;
+        await existing.save();
+        console.log(`🔄 ${admin.email} role actualizado: ${existing.role} → ${admin.role}`);
+      } else {
+        console.log(`✓ ${admin.email} ya existe (role: ${existing.role}, active: ${existing.isActive})`);
+      }
     } else {
       const user = await User.create({
         email: admin.email,
