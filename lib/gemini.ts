@@ -69,6 +69,23 @@ class GeminiService {
     return prompt;
   }
 
+  private buildChatHistory(systemPrompt: string, history: ChatMessage[]) {
+    return [
+      {
+        role: 'user' as const,
+        parts: [{ text: systemPrompt }],
+      },
+      {
+        role: 'model' as const,
+        parts: [{ text: '¡Hola! Soy OlivIA, tu asistente para la tienda. ¿En qué puedo ayudarte hoy?' }],
+      },
+      ...history.map((msg) => ({
+        role: msg.role as 'user' | 'model',
+        parts: [{ text: msg.parts }],
+      })),
+    ];
+  }
+
   async chat(
     userMessage: string,
     history: ChatMessage[] = [],
@@ -76,23 +93,8 @@ class GeminiService {
   ): Promise<string> {
     try {
       const systemPrompt = this.buildSystemPrompt(context);
-
-      // Iniciar chat con historial
       const chat = this.model.startChat({
-        history: [
-          {
-            role: 'user',
-            parts: [{ text: systemPrompt }],
-          },
-          {
-            role: 'model',
-            parts: [{ text: '¡Hola! Soy OlivIA, tu asistente para la tienda. ¿En qué puedo ayudarte hoy?' }],
-          },
-          ...history.map((msg) => ({
-            role: msg.role,
-            parts: [{ text: msg.parts }],
-          })),
-        ],
+        history: this.buildChatHistory(systemPrompt, history),
         generationConfig: {
           maxOutputTokens: 1000,
           temperature: 0.7,
@@ -105,6 +107,27 @@ class GeminiService {
     } catch (error: any) {
       console.error('Gemini chat error:', error);
       throw new Error(`Error al procesar el mensaje: ${error.message}`);
+    }
+  }
+
+  async *chatStream(
+    userMessage: string,
+    history: ChatMessage[] = [],
+    context?: ChatContext
+  ): AsyncGenerator<string> {
+    const systemPrompt = this.buildSystemPrompt(context);
+    const chat = this.model.startChat({
+      history: this.buildChatHistory(systemPrompt, history),
+      generationConfig: {
+        maxOutputTokens: 1000,
+        temperature: 0.7,
+      },
+    });
+
+    const result = await chat.sendMessageStream(userMessage);
+    for await (const chunk of result.stream) {
+      const text = chunk.text();
+      if (text) yield text;
     }
   }
 

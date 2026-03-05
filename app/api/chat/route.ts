@@ -6,6 +6,8 @@ import Conversation from '@/models/Conversation';
 import User from '@/models/User';
 import { getGeminiService } from '@/lib/gemini';
 import { getOdooClient } from '@/lib/odoo';
+import { getEmbeddingService } from '@/lib/embedding';
+import { getCachedLowStock, getCachedTopSellers } from '@/lib/cache';
 
 export async function POST(req: NextRequest) {
   try {
@@ -33,8 +35,8 @@ export async function POST(req: NextRequest) {
       if (!conversation || conversation.userId !== session.user.dbId) {
         return NextResponse.json({ error: 'Conversation not found' }, { status: 404 });
       }
-      // Convertir historial para Gemini
-      history = conversation.messages.map((msg) => ({
+      // Convertir historial para Gemini (últimos 15 mensajes)
+      history = conversation.messages.slice(-15).map((msg) => ({
         role: msg.role === 'assistant' ? 'model' : msg.role,
         parts: msg.content,
       }));
@@ -51,61 +53,63 @@ export async function POST(req: NextRequest) {
     let context = undefined;
     if (includeContext) {
       try {
-        // Analizar intención del mensaje
-        const intent = await gemini.searchProductsByIntent(message);
-
-        // Buscar productos relevantes
-        let products: any[] = [];
-        if (intent.searchTerms.length > 0) {
-          products = await odoo.searchProducts(intent.searchTerms[0]);
-        }
-
-        // Obtener productos con bajo stock
-        const lowStock = await odoo.getLowStockProducts(10);
-
-        // Obtener productos más vendidos
-        const { topSelling } = await odoo.getProductSalesRanking(30, 10, 0);
-
-        context = {
-          products,
-          lowStock,
-          recentSales: topSelling,
-        };
+        const embeddingService = getEmbeddingService();
+        const [products, lowStock, { topSelling }] = await Promise.all([
+          embeddingService.searchSimilarProducts(message, 15),
+          getCachedLowStock(() => odoo.getLowStockProducts(10)),
+          getCachedTopSellers(() => odoo.getProductSalesRanking(30, 10, 0)),
+        ]);
+        context = { products, lowStock, recentSales: topSelling };
       } catch (error) {
         console.error('Error loading context:', error);
-        // Continuar sin contexto si hay error
       }
     }
-    const response = await gemini.chat(message, history, context);
 
-    // Guardar mensajes en la conversación
-    conversation.messages.push({
-      role: 'user',
-      content: message,
-      timestamp: new Date(),
+    const encoder = new TextEncoder();
+    let fullResponse = '';
+
+    const stream = new ReadableStream({
+      async start(controller) {
+        try {
+          for await (const chunk of gemini.chatStream(message, history, context)) {
+            fullResponse += chunk;
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ chunk })}\n\n`));
+          }
+
+          // Guardar conversación completa
+          conversation.messages.push({ role: 'user', content: message, timestamp: new Date() });
+          conversation.messages.push({ role: 'assistant', content: fullResponse, timestamp: new Date() });
+          await conversation.save();
+
+          // Tracking de uso
+          User.updateOne(
+            { _id: session.user.dbId },
+            { $inc: { 'usage.totalMessages': 1 }, $set: { 'usage.lastActiveAt': new Date() } }
+          ).catch((err: any) => console.error('Error updating usage:', err));
+
+          // Enviar metadata final
+          controller.enqueue(
+            encoder.encode(
+              `data: ${JSON.stringify({ done: true, conversationId: conversation._id.toString(), title: conversation.title })}\n\n`
+            )
+          );
+        } catch (error: any) {
+          console.error('Stream error:', error);
+          controller.enqueue(
+            encoder.encode(`data: ${JSON.stringify({ error: error.message || 'Error interno' })}\n\n`)
+          );
+        } finally {
+          controller.close();
+        }
+      },
     });
 
-    conversation.messages.push({
-      role: 'assistant',
-      content: response,
-      timestamp: new Date(),
-    });
-
-    await conversation.save();
-
-    // Tracking de uso
-    User.updateOne(
-      { _id: session.user.dbId },
-      {
-        $inc: { 'usage.totalMessages': 1 },
-        $set: { 'usage.lastActiveAt': new Date() },
-      }
-    ).catch((err: any) => console.error('Error updating usage:', err));
-
-    return NextResponse.json({
-      response,
-      conversationId: conversation._id.toString(),
-      title: conversation.title,
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        Connection: 'keep-alive',
+      },
     });
   } catch (error: any) {
     console.error('Chat API error:', error);

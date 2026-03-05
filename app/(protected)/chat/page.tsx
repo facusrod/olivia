@@ -41,6 +41,14 @@ export default function ChatPage() {
     setInput('');
     setLoading(true);
 
+    // Placeholder del mensaje assistant que se irá llenando con el stream
+    const assistantPlaceholder: Message = {
+      role: 'assistant',
+      content: '',
+      timestamp: new Date(),
+    };
+    setMessages((prev) => [...prev, assistantPlaceholder]);
+
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -52,32 +60,56 @@ export default function ChatPage() {
         }),
       });
 
-      if (!response.ok) {
+      if (!response.ok || !response.body) {
         throw new Error('Error al enviar mensaje');
       }
 
-      const data = await response.json();
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
 
-      if (!conversationId && data.conversationId) {
-        setConversationId(data.conversationId);
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n\n');
+        buffer = lines.pop() ?? '';
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          try {
+            const data = JSON.parse(line.slice(6));
+
+            if (data.chunk) {
+              setMessages((prev) => {
+                const updated = [...prev];
+                const last = updated[updated.length - 1];
+                updated[updated.length - 1] = { ...last, content: last.content + data.chunk };
+                return updated;
+              });
+            } else if (data.done) {
+              if (!conversationId && data.conversationId) {
+                setConversationId(data.conversationId);
+              }
+            } else if (data.error) {
+              throw new Error(data.error);
+            }
+          } catch {
+            // chunk malformado, ignorar
+          }
+        }
       }
-
-      const assistantMessage: Message = {
-        role: 'assistant',
-        content: data.response,
-        timestamp: new Date(),
-      };
-
-      setMessages((prev) => [...prev, assistantMessage]);
     } catch (error) {
       console.error('Error:', error);
-      const errorMessage: Message = {
-        role: 'assistant',
-        content:
-          'Lo siento, hubo un error al procesar tu mensaje. Por favor, intenta de nuevo.',
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, errorMessage]);
+      setMessages((prev) => {
+        const updated = [...prev];
+        updated[updated.length - 1] = {
+          ...updated[updated.length - 1],
+          content: 'Lo siento, hubo un error al procesar tu mensaje. Por favor, intenta de nuevo.',
+        };
+        return updated;
+      });
     } finally {
       setLoading(false);
     }
