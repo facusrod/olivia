@@ -523,6 +523,23 @@ class OdooClient {
   }
 
   /**
+   * Obtiene timestamps de órdenes para un modelo dado (pos.order o sale.order).
+   * Retorna solo date_order para construir heatmaps sin traer datos pesados.
+   */
+  async getOrderTimestamps(
+    model: 'pos.order' | 'sale.order',
+    filters: any[]
+  ): Promise<string[]> {
+    const allFilters = model === 'sale.order'
+      ? [['website_id', '!=', false], ...filters]
+      : filters;
+    const records = await this.executeKw(model, 'search_read', [allFilters], {
+      fields: ['date_order'],
+    });
+    return records.map((r: any) => r.date_order);
+  }
+
+  /**
    * Calcula el valor total de inventario (list_price × qty_available) en una sola llamada.
    * Solo trae productos con stock > 0 y únicamente 2 campos.
    */

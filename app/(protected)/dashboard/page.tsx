@@ -25,6 +25,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import Modal from '@/components/Modal';
+import SalesHeatmap from '@/components/SalesHeatmap';
 import { useUserRole } from '@/lib/useUserRole';
 
 interface DashboardData {
@@ -62,6 +63,7 @@ interface DashboardData {
     slowMoving: Array<{ id: number; name: string; totalQty: number; qty_available: number }>;
     expiring: Array<{ id: number; name: string; totalQty: number; expirationDate: string; lotName: string; daysUntilExpiration: number }>;
   };
+  salesHeatmap?: number[][];
   updatedAt: string;
 }
 
@@ -650,6 +652,9 @@ export default function DashboardPage() {
             {valorInventarioCard}
           </div>
           {pedidosPendientesCard}
+          {data.salesHeatmap && data.salesHeatmap.length > 0 && (
+            <SalesHeatmap data={data.salesHeatmap} />
+          )}
         </>
       ) : (
         <>
