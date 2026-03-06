@@ -19,7 +19,7 @@ class GeminiService {
 
   constructor() {
     this.model = genAI.getGenerativeModel({
-      model: 'gemini-2.0-flash',
+      model: 'gemini-2.5-flash-preview-04-17',
     });
   }
 
@@ -124,11 +124,24 @@ class GeminiService {
       },
     });
 
-    const result = await chat.sendMessageStream(userMessage);
-    for await (const chunk of result.stream) {
-      const text = chunk.text();
-      if (text) yield text;
+    let lastError: any;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (attempt > 0) {
+        await new Promise((resolve) => setTimeout(resolve, 2000 * attempt));
+      }
+      try {
+        const result = await chat.sendMessageStream(userMessage);
+        for await (const chunk of result.stream) {
+          const text = chunk.text();
+          if (text) yield text;
+        }
+        return;
+      } catch (error: any) {
+        lastError = error;
+        if (!error?.message?.includes('503')) break;
+      }
     }
+    throw lastError;
   }
 
   async analyzeForPurchaseOrders(
