@@ -6,7 +6,6 @@ import Conversation from '@/models/Conversation';
 import User from '@/models/User';
 import { getGeminiService } from '@/lib/gemini';
 import { getOdooClient } from '@/lib/odoo';
-import { getEmbeddingService } from '@/lib/embedding';
 import { getCachedLowStock, getCachedTopSellers } from '@/lib/cache';
 
 export async function POST(req: NextRequest) {
@@ -53,9 +52,8 @@ export async function POST(req: NextRequest) {
     let context = undefined;
     if (includeContext) {
       try {
-        const embeddingService = getEmbeddingService();
         const [products, lowStock, { topSelling }] = await Promise.all([
-          embeddingService.searchSimilarProducts(message, 15),
+          odoo.searchProducts(message.slice(0, 50)),
           getCachedLowStock(() => odoo.getLowStockProducts(10)),
           getCachedTopSellers(() => odoo.getProductSalesRanking(30, 10, 0)),
         ]);
