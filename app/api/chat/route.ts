@@ -48,12 +48,23 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // Extraer keywords del mensaje para buscar productos relevantes
+    const stopWords = new Set(['como', 'que', 'qué', 'los', 'las', 'del', 'para', 'con', 'una', 'uno',
+      'tenemos', 'vendemos', 'tienen', 'tienes', 'tiene', 'productos', 'producto', 'busco', 'busca',
+      'hay', 'cuales', 'cuáles', 'algún', 'alguna', 'disponibles', 'disponible', 'stock', 'marca',
+      'nos', 'nos', 'no', 'si', 'por', 'favor', 'puedes', 'puedo', 'quiero', 'necesito']);
+    const searchQuery = message
+      .toLowerCase()
+      .replace(/[¿?¡!.,]/g, '')
+      .split(/\s+/)
+      .filter((w: string) => w.length > 3 && !stopWords.has(w))[0] || message.slice(0, 30);
+
     // Obtener contexto si se solicita
     let context = undefined;
     if (includeContext) {
       try {
         const [products, lowStock, { topSelling }] = await Promise.all([
-          odoo.searchProducts(message.slice(0, 50)),
+          odoo.searchProducts(searchQuery),
           getCachedLowStock(() => odoo.getLowStockProducts(10)),
           getCachedTopSellers(() => odoo.getProductSalesRanking(30, 10, 0)),
         ]);
