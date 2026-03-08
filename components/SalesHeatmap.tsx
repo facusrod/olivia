@@ -26,7 +26,7 @@ export default function SalesHeatmap({ data }: SalesHeatmapProps) {
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6">
       <h3 className="text-base md:text-lg text-gray-900 mb-4">
-        ¿Cuándo se Vende Más? <span className="text-sm font-normal text-gray-500">(último mes)</span>
+        ¿Cuándo se Vende Más? <span className="text-sm font-normal text-gray-500">(últimos 7 días)</span>
       </h3>
 
       <div

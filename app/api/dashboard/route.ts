@@ -142,6 +142,12 @@ async function generateDashboardData() {
     ART_OFFSET, 0, 0
   ));
 
+  // Hace 7 días en Argentina (para heatmap)
+  const startOf7DaysAgo = new Date(Date.UTC(
+    todayArg.getUTCFullYear(), todayArg.getUTCMonth(), todayArg.getUTCDate() - 7,
+    ART_OFFSET, 0, 0
+  ));
+
   // Primer día del mes anterior en Argentina
   const startOfLastMonth = new Date(Date.UTC(
     todayArg.getUTCFullYear(), todayArg.getUTCMonth() - 1, 1,
@@ -202,15 +208,13 @@ async function generateDashboardData() {
       ['date_order', '<=', endOfLastMonth.toISOString()],
       ['state', 'in', confirmedStates],
     ]))),
-    // Timestamps para heatmap de ventas (último mes)
+    // Timestamps para heatmap de ventas (últimos 7 días)
     limit(() => timed('posTimestamps', odoo.getOrderTimestamps('pos.order', [
-      ['date_order', '>=', startOfLastMonth.toISOString()],
-      ['date_order', '<=', endOfLastMonth.toISOString()],
+      ['date_order', '>=', startOf7DaysAgo.toISOString()],
       ['state', 'in', confirmedStates],
     ]))),
     limit(() => timed('ecomTimestamps', odoo.getOrderTimestamps('sale.order', [
-      ['date_order', '>=', startOfLastMonth.toISOString()],
-      ['date_order', '<=', endOfLastMonth.toISOString()],
+      ['date_order', '>=', startOf7DaysAgo.toISOString()],
       ['state', 'in', confirmedStates],
     ]))),
   ]);
