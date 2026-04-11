@@ -326,13 +326,17 @@ export default function DashboardPage() {
   };
 
   const renderExpiringItem = (product: DashboardData['products']['expiring'][0]) => {
-    const isUrgent = product.daysUntilExpiration <= 7;
-    const isWarning = product.daysUntilExpiration > 7 && product.daysUntilExpiration <= 15;
+    const isExpired = product.daysUntilExpiration < 0;
+    const isUrgent = !isExpired && product.daysUntilExpiration <= 7;
+    const isWarning = !isExpired && product.daysUntilExpiration > 7 && product.daysUntilExpiration <= 15;
+    const daysAgo = Math.abs(product.daysUntilExpiration);
     return (
       <div
-        key={`${product.id}-${product.lotName}`}
+        key={`${product.id}-${product.lotName}-${isExpired ? 'exp' : 'pend'}`}
         className={`flex items-center justify-between p-3 rounded-lg border ${
-          isUrgent
+          isExpired
+            ? 'bg-red-100 border-red-400'
+            : isUrgent
             ? 'bg-red-50 border-red-200'
             : isWarning
             ? 'bg-orange-50 border-orange-200'
@@ -340,7 +344,12 @@ export default function DashboardPage() {
         }`}
       >
         <div className="flex-1 min-w-0">
-          <p className="font-medium text-gray-900 truncate text-sm md:text-base">
+          {isExpired && (
+            <span className="inline-block mb-1 px-1.5 py-0.5 text-[10px] font-bold text-white bg-red-700 rounded">
+              VENCIDO
+            </span>
+          )}
+          <p className={`font-medium truncate text-sm md:text-base ${isExpired ? 'text-red-900' : 'text-gray-900'}`}>
             {product.name}
           </p>
           <p className="text-xs text-gray-600">Lote: {product.lotName}</p>
@@ -349,15 +358,25 @@ export default function DashboardPage() {
           </p>
         </div>
         <div className="text-right ml-3">
-          <p className={`text-lg font-bold ${
-            isUrgent ? 'text-red-600' : isWarning ? 'text-orange-600' : 'text-yellow-600'
-          }`}>
-            {product.daysUntilExpiration}
-          </p>
-          <p className="text-xs text-gray-600">
-            {product.daysUntilExpiration === 1 ? 'día' : 'días'}
-          </p>
-          <p className="text-xs text-gray-500 mt-1">{product.totalQty} u.</p>
+          {isExpired ? (
+            <>
+              <p className="text-xs font-semibold text-red-800">hace</p>
+              <p className="text-lg font-bold text-red-800">{daysAgo}</p>
+              <p className="text-xs text-red-800">{daysAgo === 1 ? 'día' : 'días'}</p>
+            </>
+          ) : (
+            <>
+              <p className={`text-lg font-bold ${
+                isUrgent ? 'text-red-600' : isWarning ? 'text-orange-600' : 'text-yellow-600'
+              }`}>
+                {product.daysUntilExpiration}
+              </p>
+              <p className="text-xs text-gray-600">
+                {product.daysUntilExpiration === 1 ? 'día' : 'días'}
+              </p>
+            </>
+          )}
+          <p className={`text-xs mt-1 ${isExpired ? 'text-red-800 font-semibold' : 'text-gray-500'}`}>{product.totalQty} u.</p>
         </div>
       </div>
     );
@@ -682,7 +701,7 @@ export default function DashboardPage() {
                 <h3 className="text-base md:text-lg text-gray-900">
                   Próximos a Vencer
                 </h3>
-                <p className="text-xs md:text-sm text-gray-600">Próximos 30 días</p>
+                <p className="text-xs md:text-sm text-gray-600">Vencidos + próximos 30 días</p>
               </div>
             </div>
             {data.products.expiring.length > 10 && (

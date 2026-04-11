@@ -213,7 +213,6 @@ class OdooClient {
       const thresholdDate = new Date();
       thresholdDate.setDate(now.getDate() + daysThreshold);
 
-      const nowStr = now.toISOString().split('T')[0];
       const thresholdStr = thresholdDate.toISOString().split('T')[0];
 
       const lots: OdooProductLot[] = await this.executeKw('stock.lot', 'search_read', [
@@ -223,14 +222,14 @@ class OdooClient {
           ['use_date', '!=', false],
           ['removal_date', '!=', false],
           '|', '|',
-          '&', ['expiration_date', '>=', nowStr], ['expiration_date', '<=', thresholdStr],
-          '&', ['use_date', '>=', nowStr], ['use_date', '<=', thresholdStr],
-          '&', ['removal_date', '>=', nowStr], ['removal_date', '<=', thresholdStr],
+          ['expiration_date', '<=', thresholdStr],
+          ['use_date', '<=', thresholdStr],
+          ['removal_date', '<=', thresholdStr],
           ['product_qty', '>', 0]
         ],
       ], {
         fields: ['id', 'name', 'product_id', 'product_qty', 'expiration_date', 'use_date', 'removal_date'],
-        limit: limit * 3,
+        limit: limit * 5,
         order: 'expiration_date asc, use_date asc, removal_date asc',
       });
 
@@ -238,7 +237,8 @@ class OdooClient {
         return [];
       }
 
-      const productMap: { [key: number]: any } = {};
+      const productMap: { [key: string]: any } = {};
+      const todayStr = now.toISOString().split('T')[0];
 
       for (const lot of lots) {
         const productId = lot.product_id[0];
@@ -247,8 +247,11 @@ class OdooClient {
 
         if (!expirationDate) continue;
 
-        if (!productMap[productId]) {
-          productMap[productId] = {
+        const isExpired = expirationDate < todayStr;
+        const key = `${productId}-${isExpired ? 'exp' : 'pend'}`;
+
+        if (!productMap[key]) {
+          productMap[key] = {
             id: productId,
             name: productName,
             totalQty: 0,
@@ -257,13 +260,13 @@ class OdooClient {
             daysUntilExpiration: 0
           };
         } else {
-          if (expirationDate < productMap[productId].expirationDate) {
-            productMap[productId].expirationDate = expirationDate;
-            productMap[productId].lotName = lot.name;
+          if (expirationDate < productMap[key].expirationDate) {
+            productMap[key].expirationDate = expirationDate;
+            productMap[key].lotName = lot.name;
           }
         }
 
-        productMap[productId].totalQty += lot.product_qty;
+        productMap[key].totalQty += lot.product_qty;
       }
 
       const products = Object.values(productMap).map(product => {
