@@ -1,13 +1,14 @@
 'use client';
 
 import {
-  BarChart,
-  Bar,
+  LineChart,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   Legend,
+  Brush,
   ResponsiveContainer,
 } from 'recharts';
 
@@ -50,7 +51,7 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
       <p className="font-semibold text-slate-700 mb-2">{label}</p>
       {payload.map((p) => (
         <div key={p.name} className="flex items-center gap-2 text-slate-600">
-          <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: p.color }} />
+          <span className="inline-block w-2.5 h-2 rounded-sm" style={{ background: p.color }} />
           <span>{p.name}:</span>
           <span className="font-medium">
             {new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(p.value)}
@@ -59,7 +60,7 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
       ))}
       {payload.length > 1 && (
         <div className="flex items-center gap-2 text-slate-800 font-semibold border-t border-slate-100 mt-2 pt-2">
-          <span className="inline-block w-2.5 h-2.5" />
+          <span className="inline-block w-2.5 h-2" />
           <span>Total:</span>
           <span>
             {new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(total)}
@@ -85,9 +86,12 @@ export default function MonthlySalesChart({ data }: MonthlySalesChartProps) {
     Ecommerce: Math.round(d.ecom),
   }));
 
+  // Mostrar los últimos 12 meses por defecto en el brush
+  const brushStart = Math.max(0, chartData.length - 12);
+
   return (
-    <ResponsiveContainer width="100%" height={280}>
-      <BarChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 4 }}>
+    <ResponsiveContainer width="100%" height={320}>
+      <LineChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 4 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
         <XAxis
           dataKey="name"
@@ -102,15 +106,37 @@ export default function MonthlySalesChart({ data }: MonthlySalesChartProps) {
           tickLine={false}
           width={52}
         />
-        <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f8fafc' }} />
+        <Tooltip content={<CustomTooltip />} />
         <Legend
-          iconType="square"
-          iconSize={10}
-          wrapperStyle={{ fontSize: '12px', paddingTop: '8px' }}
+          iconType="plainline"
+          iconSize={16}
+          wrapperStyle={{ fontSize: '12px', paddingTop: '4px' }}
         />
-        <Bar dataKey="POS" stackId="a" fill="#0d9488" radius={[0, 0, 0, 0]} />
-        <Bar dataKey="Ecommerce" stackId="a" fill="#6366f1" radius={[4, 4, 0, 0]} />
-      </BarChart>
+        <Line
+          type="monotone"
+          dataKey="POS"
+          stroke="#0d9488"
+          strokeWidth={2}
+          dot={false}
+          activeDot={{ r: 4, strokeWidth: 0 }}
+        />
+        <Line
+          type="monotone"
+          dataKey="Ecommerce"
+          stroke="#6366f1"
+          strokeWidth={2}
+          dot={false}
+          activeDot={{ r: 4, strokeWidth: 0 }}
+        />
+        <Brush
+          dataKey="name"
+          startIndex={brushStart}
+          height={24}
+          stroke="#e2e8f0"
+          fill="#f8fafc"
+          travellerWidth={6}
+        />
+      </LineChart>
     </ResponsiveContainer>
   );
 }
