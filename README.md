@@ -57,14 +57,14 @@ openssl rand -base64 32
 ### Deploy
 1. Conectar el repo en [vercel.com](https://vercel.com)
 2. Configurar variables de entorno (ver `.env.production.example`)
-3. Configurar dominio: `olivia.greenhouse.com.ar` → CNAME `cname.vercel-dns.com`
+3. Configurar dominio: `olivia.tu-dominio.com` → CNAME `cname.vercel-dns.com`
 
 ### Conexion Odoo desde Vercel
-Odoo esta en `https://odoo.greenhouse.com.ar` protegido por Cloudflare Zero Trust.
+Odoo puede estar protegido por Cloudflare Zero Trust.
 
 Opciones:
 1. **Service Token de Zero Trust** - CF_ACCESS_CLIENT_ID / CF_ACCESS_CLIENT_SECRET
-2. **Subdominio API** - `api.greenhouse.com.ar` sin Zero Trust + API key de Odoo
+2. **Subdominio API** - subdominio sin Zero Trust + API key de Odoo
 
 ## Estructura del proyecto
 
@@ -98,15 +98,6 @@ odoo.conf                 # Config Odoo local
 - **Productos**: inventario en tiempo real desde Odoo
 - **Sugerencias de compra**: analisis automatico con IA basado en ventas y stock
 - **Historial**: conversaciones almacenadas por usuario en MongoDB
-
-## Dominios
-
-| Dominio | Destino | Proteccion |
-|---------|---------|------------|
-| greenhouse.com.ar | Redirige a www | - |
-| www.greenhouse.com.ar | Tienda Odoo | Publica |
-| odoo.greenhouse.com.ar | Admin Odoo | Zero Trust |
-| olivia.greenhouse.com.ar | Vercel | Por definir |
 
 ## Troubleshooting
 

@@ -31,11 +31,9 @@ if (!MONGODB_URI) {
   process.exit(1);
 }
 
-// Usuarios admin iniciales
+// Usuarios admin iniciales - reemplazar con los correos reales antes de ejecutar
 const ADMIN_USERS = [
-  { email: 'frcuutn@gmail.com', name: 'Facundo Rodriguez', role: 'admin' },
-  { email: 'pontelli58@gmail.com', name: 'Pontelli', role: 'admin' },
-  { email: 'greenhouse.cdelu@gmail.com', name: 'Green House CdelU', role: 'user' }
+  { email: 'admin@tu-dominio.com', name: 'Admin', role: 'admin' },
 ];
 
 const UserSchema = new mongoose.Schema({
