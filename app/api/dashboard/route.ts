@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth-options';
 import { getOdooClient } from '@/lib/odoo';
 import connectDB from '@/lib/mongodb';
 import DashboardSnapshot from '@/models/DashboardSnapshot';
+import MonthlySalesHistory from '@/models/MonthlySalesHistory';
 import pLimit from 'p-limit';
 
 /**
@@ -15,6 +16,89 @@ function timed<T>(label: string, promise: Promise<T>): Promise<T> {
     (result) => { console.log(`⏱️ ${label}: ${Date.now() - start}ms`); return result; },
     (error) => { console.log(`⏱️ ${label}: ${Date.now() - start}ms (ERROR)`); throw error; }
   );
+}
+
+/** Retorna el historial mensual guardado en MongoDB, ordenado por mes ascendente. */
+async function getSalesHistory() {
+  return MonthlySalesHistory.find().sort({ month: 1 }).lean();
+}
+
+/**
+ * Sincroniza el historial mensual de ventas en MongoDB.
+ * - Primera vez (sin registros): fetch de toda la historia desde Odoo (2 RPC calls con groupby month).
+ * - Siguientes veces: solo re-fetch del mes actual (2 RPC calls — reutiliza getPosOrderStats/getEcommerceOrderStats).
+ * Los meses cerrados nunca se re-consultan a Odoo.
+ */
+async function syncMonthlySalesHistory() {
+  const odoo = getOdooClient();
+  const confirmedStates = ['sale', 'done', 'paid', 'invoiced'];
+
+  const ART_OFFSET = 3;
+  const now = new Date();
+  const todayArg = new Date(now.getTime() - ART_OFFSET * 3600000);
+  const currentMonth = `${todayArg.getUTCFullYear()}-${String(todayArg.getUTCMonth() + 1).padStart(2, '0')}`;
+
+  const startOfCurrentMonth = new Date(Date.UTC(
+    todayArg.getUTCFullYear(), todayArg.getUTCMonth(), 1,
+    ART_OFFSET, 0, 0
+  ));
+
+  const existingCount = await MonthlySalesHistory.countDocuments();
+
+  if (existingCount === 0) {
+    // Primera carga: fetch toda la historia con groupby month (1 RPC por canal)
+    const [posHistory, ecomHistory] = await Promise.all([
+      timed('monthlyPos-full', odoo.getMonthlyRevenueByChannel('pos.order', [['state', 'in', confirmedStates]])),
+      timed('monthlyEcom-full', odoo.getMonthlyRevenueByChannel('sale.order', [['state', 'in', confirmedStates]])),
+    ]);
+
+    // Merge POS + Ecom por mes
+    const monthMap = new Map<string, { pos: number; ecom: number; posCount: number; ecomCount: number }>();
+    for (const r of posHistory) {
+      monthMap.set(r.month, { pos: r.revenue, ecom: 0, posCount: r.count, ecomCount: 0 });
+    }
+    for (const r of ecomHistory) {
+      const existing = monthMap.get(r.month) ?? { pos: 0, ecom: 0, posCount: 0, ecomCount: 0 };
+      monthMap.set(r.month, { ...existing, ecom: r.revenue, ecomCount: r.count });
+    }
+
+    // Bulk upsert en MongoDB
+    const ops = Array.from(monthMap.entries()).map(([month, data]) => ({
+      updateOne: {
+        filter: { month },
+        update: { $set: { month, ...data, total: data.pos + data.ecom } },
+        upsert: true,
+      },
+    }));
+    if (ops.length > 0) await MonthlySalesHistory.bulkWrite(ops);
+  } else {
+    // Solo actualizar el mes actual (meses pasados son inmutables)
+    const [posMonth, ecomMonth] = await Promise.all([
+      timed('monthlyPos-current', odoo.getPosOrderStats([
+        ['date_order', '>=', startOfCurrentMonth.toISOString()],
+        ['state', 'in', confirmedStates],
+      ])),
+      timed('monthlyEcom-current', odoo.getEcommerceOrderStats([
+        ['date_order', '>=', startOfCurrentMonth.toISOString()],
+        ['state', 'in', confirmedStates],
+      ])),
+    ]);
+
+    await MonthlySalesHistory.updateOne(
+      { month: currentMonth },
+      {
+        $set: {
+          month: currentMonth,
+          pos: posMonth.revenue,
+          ecom: ecomMonth.revenue,
+          total: posMonth.revenue + ecomMonth.revenue,
+          posCount: posMonth.count,
+          ecomCount: ecomMonth.count,
+        },
+      },
+      { upsert: true }
+    );
+  }
 }
 
 /**
@@ -35,6 +119,8 @@ export async function GET(req: NextRequest) {
       .sort({ generatedAt: -1 })
       .lean();
 
+    const salesHistory = await getSalesHistory();
+
     if (lastSnapshot && lastSnapshot.generatedAt >= new Date(Date.now() - 60 * 60 * 1000)) { // Si el snapshot es reciente (menos de 1 hora), devolverlo
       return NextResponse.json({
         sales: lastSnapshot.sales,
@@ -42,17 +128,23 @@ export async function GET(req: NextRequest) {
         inventory: lastSnapshot.inventory,
         products: lastSnapshot.products,
         salesHeatmap: lastSnapshot.salesHeatmap || [],
+        salesHistory,
         updatedAt: lastSnapshot.generatedAt,
       });
     }
 
     // No hay snapshot, generar el primero automáticamente
-    const data = await generateDashboardData();
+    const [data] = await Promise.all([
+      generateDashboardData(),
+      syncMonthlySalesHistory(),
+    ]);
 
     const snapshot = await DashboardSnapshot.create({
       ...data,
       generatedAt: new Date(),
     });
+
+    const freshHistory = await getSalesHistory();
 
     return NextResponse.json({
       sales: snapshot.sales,
@@ -60,6 +152,7 @@ export async function GET(req: NextRequest) {
       inventory: snapshot.inventory,
       products: snapshot.products,
       salesHeatmap: snapshot.salesHeatmap || [],
+      salesHistory: freshHistory,
       updatedAt: snapshot.generatedAt,
     });
   } catch (error: any) {
@@ -83,12 +176,18 @@ export async function POST(req: NextRequest) {
 
     await connectDB();
 
-    const data = await generateDashboardData();
+    // Ambas operaciones en paralelo: dashboard metrics + historial mensual
+    const [data] = await Promise.all([
+      generateDashboardData(),
+      syncMonthlySalesHistory(),
+    ]);
 
     const snapshot = await DashboardSnapshot.create({
       ...data,
       generatedAt: new Date(),
     });
+
+    const salesHistory = await getSalesHistory();
 
     return NextResponse.json({
       sales: snapshot.sales,
@@ -96,6 +195,7 @@ export async function POST(req: NextRequest) {
       inventory: snapshot.inventory,
       products: snapshot.products,
       salesHeatmap: snapshot.salesHeatmap || [],
+      salesHistory,
       updatedAt: snapshot.generatedAt,
     });
   } catch (error: any) {

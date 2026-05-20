@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import Modal from '@/components/Modal';
 import SalesHeatmap from '@/components/SalesHeatmap';
+import MonthlySalesChart from '@/components/MonthlySalesChart';
 import { useUserRole } from '@/lib/useUserRole';
 
 interface DashboardData {
@@ -64,6 +65,7 @@ interface DashboardData {
     expiring: Array<{ id: number; name: string; totalQty: number; expirationDate: string; lotName: string; daysUntilExpiration: number }>;
   };
   salesHeatmap?: number[][];
+  salesHistory?: Array<{ month: string; pos: number; ecom: number; total: number }>;
   updatedAt: string;
 }
 
@@ -673,6 +675,20 @@ export default function DashboardPage() {
           {pedidosPendientesCard}
           {data.salesHeatmap && data.salesHeatmap.length > 0 && (
             <SalesHeatmap data={data.salesHeatmap} />
+          )}
+          {data.salesHistory && data.salesHistory.length > 0 && (
+            <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6">
+              <div className="flex items-center gap-3 mb-4 md:mb-6">
+                <div className="w-9 h-9 md:w-10 md:h-10 bg-teal-100 rounded-lg flex items-center justify-center">
+                  <BarChart3 className="w-4 h-4 md:w-5 md:h-5 text-teal-600" />
+                </div>
+                <div>
+                  <h3 className="text-base md:text-lg text-gray-900">Ventas Históricas</h3>
+                  <p className="text-xs md:text-sm text-gray-600">PDV + Ecommerce por mes</p>
+                </div>
+              </div>
+              <MonthlySalesChart data={data.salesHistory} />
+            </div>
           )}
         </>
       ) : (

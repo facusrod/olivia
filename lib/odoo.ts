@@ -543,6 +543,41 @@ class OdooClient {
   }
 
   /**
+   * Obtiene ventas mensuales agrupadas por mes para un modelo dado (pos.order o sale.order).
+   * Usa read_group con groupby date:month → 1 RPC que devuelve N filas (una por mes).
+   * El mes se extrae del __domain (locale-independent) en formato "YYYY-MM".
+   */
+  async getMonthlyRevenueByChannel(
+    model: 'pos.order' | 'sale.order',
+    filters: any[] = []
+  ): Promise<Array<{ month: string; revenue: number; count: number }>> {
+    const allFilters = model === 'sale.order'
+      ? [['website_id', '!=', false], ...filters]
+      : filters;
+
+    const result = await this.readGroup(
+      model,
+      allFilters,
+      ['amount_total'],
+      ['date_order:month'],
+      { lazy: false, orderby: 'date_order asc' }
+    );
+
+    return result
+      .map((row: any) => {
+        // __domain[0] = ["date_order", ">=", "YYYY-MM-01 00:00:00"]
+        const fromDate: string = row.__domain?.[0]?.[2] ?? '';
+        const month = fromDate.substring(0, 7); // "YYYY-MM"
+        return {
+          month,
+          revenue: row.amount_total || 0,
+          count: row.__count || 0,
+        };
+      })
+      .filter((r: { month: string }) => /^\d{4}-\d{2}$/.test(r.month));
+  }
+
+  /**
    * Calcula el valor total de inventario (list_price × qty_available) en una sola llamada.
    * Solo trae productos con stock > 0 y únicamente 2 campos.
    */
