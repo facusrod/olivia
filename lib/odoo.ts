@@ -565,8 +565,13 @@ class OdooClient {
 
     return result
       .map((row: any) => {
-        // __domain[0] = ["date_order", ">=", "YYYY-MM-01 00:00:00"]
-        const fromDate: string = row.__domain?.[0]?.[2] ?? '';
+        // __domain incluye todos los filtros originales + el rango del grupo.
+        // Buscamos específicamente la condición date_order >= X (no asumimos posición fija).
+        const domain: any[] = Array.isArray(row.__domain) ? row.__domain : [];
+        const dateCond = domain.find(
+          (c: any) => Array.isArray(c) && c[0] === 'date_order' && c[1] === '>='
+        );
+        const fromDate: string = dateCond?.[2] ? String(dateCond[2]) : '';
         const month = fromDate.substring(0, 7); // "YYYY-MM"
         return {
           month,
