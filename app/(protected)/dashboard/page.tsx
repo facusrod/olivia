@@ -673,23 +673,6 @@ export default function DashboardPage() {
             {valorInventarioCard}
           </div>
           {pedidosPendientesCard}
-          {data.salesHeatmap && data.salesHeatmap.length > 0 && (
-            <SalesHeatmap data={data.salesHeatmap} />
-          )}
-          {data.salesHistory && data.salesHistory.length > 0 && (
-            <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6">
-              <div className="flex items-center gap-3 mb-4 md:mb-6">
-                <div className="w-9 h-9 md:w-10 md:h-10 bg-teal-100 rounded-lg flex items-center justify-center">
-                  <BarChart3 className="w-4 h-4 md:w-5 md:h-5 text-teal-600" />
-                </div>
-                <div>
-                  <h3 className="text-base md:text-lg text-gray-900">Ventas Históricas</h3>
-                  <p className="text-xs md:text-sm text-gray-600">PDV + Ecommerce por mes</p>
-                </div>
-              </div>
-              <MonthlySalesChart data={data.salesHistory} />
-            </div>
-          )}
         </>
       ) : (
         <>
@@ -803,6 +786,25 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Gráfico histórico y heatmap — solo admin */}
+      {isAdmin && data.salesHistory && data.salesHistory.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6">
+          <div className="flex items-center gap-3 mb-4 md:mb-6">
+            <div className="w-9 h-9 md:w-10 md:h-10 bg-teal-100 rounded-lg flex items-center justify-center">
+              <BarChart3 className="w-4 h-4 md:w-5 md:h-5 text-teal-600" />
+            </div>
+            <div>
+              <h3 className="text-base md:text-lg text-gray-900">Ventas Históricas</h3>
+              <p className="text-xs md:text-sm text-gray-600">PDV + Ecommerce por mes</p>
+            </div>
+          </div>
+          <MonthlySalesChart data={data.salesHistory} />
+        </div>
+      )}
+      {isAdmin && data.salesHeatmap && data.salesHeatmap.length > 0 && (
+        <SalesHeatmap data={data.salesHeatmap} />
+      )}
 
       {/* Modal Ver Más */}
       {modalType && (() => {
