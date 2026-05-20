@@ -17,54 +17,36 @@ export async function GET(req: NextRequest) {
 
     const odoo = getOdooClient();
 
-    // Mapeo de filtros de estado
-    const states = stateFilter === 'all'
-      ? ['sent', 'sale', 'done']
-      : stateFilter.split(',');
+    // Domain de "pendientes reales": sent sin pagar, o sale sin entrega completa.
+    // Filtro aplicado en Odoo (server-side), no en JS.
+    const pendingDomain: any[] = [
+      '|',
+      ['state', '=', 'sent'],
+      '&', ['state', '=', 'sale'], ['delivery_status', '!=', 'full'],
+    ];
 
-    const filters: any[] = [['state', 'in', states]];
+    // Domain para la vista paginada según el filtro solicitado
+    let displayFilters: any[];
+    if (stateFilter === 'pending') {
+      displayFilters = pendingDomain;
+    } else if (stateFilter === 'all') {
+      displayFilters = [['state', 'in', ['sent', 'sale', 'done']]];
+    } else {
+      displayFilters = [['state', 'in', stateFilter.split(',')]];
+    }
 
-    // Solo 2 llamadas: pedidos de la vista actual + todos los pendientes (sent+sale) para métricas
-    const [orders, allPending] = await Promise.all([
-      odoo.getEcommerceOrders(filters, limit, offset),
-      odoo.getEcommerceOrders([['state', 'in', ['sent', 'sale']]], 500),
+    // Summary con read_group: 1 RPC → 1 fila (count + sum). No más fetch de 500 registros.
+    const summaryDomain = [['website_id', '!=', false], ...pendingDomain];
+
+    const [orders, summaryResult] = await Promise.all([
+      odoo.getEcommerceOrders(displayFilters, limit, offset),
+      odoo.readGroup('sale.order', summaryDomain, ['amount_total'], []),
     ]);
 
-    // Filtrar: excluir pedidos 'sale' que ya fueron entregados completamente
-    const trulyPending = allPending.filter((o) => {
-      if (o.state === 'sent') return true; // Sin pagar siempre es pendiente
-      if (o.state === 'sale' && o.delivery_status === 'full') return false; // Pagado + entregado = no pendiente
-      return true;
-    });
+    const pendingCount = summaryResult[0]?.__count || 0;
+    const totalPendingAmount = summaryResult[0]?.amount_total || 0;
 
-    // Calcular métricas desde trulyPending (sin llamadas extra)
-    const pendingCount = trulyPending.length;
-    const totalPendingAmount = trulyPending.reduce(
-      (sum, o) => sum + (o.amount_total || 0),
-      0
-    );
-
-    // Pedidos de hoy (filtrar en JS, no otra llamada a Odoo)
-    // Medianoche Argentina (UTC-3) = 03:00 UTC
-    const ART_OFFSET = 3;
-    const now = new Date();
-    const todayArg = new Date(now.getTime() - ART_OFFSET * 3600000);
-    const startOfDay = new Date(Date.UTC(
-      todayArg.getUTCFullYear(), todayArg.getUTCMonth(), todayArg.getUTCDate(),
-      ART_OFFSET, 0, 0
-    ));
-    const todayCount = allPending.filter(
-      (o) => new Date(o.date_order) >= startOfDay
-    ).length;
-
-    // Total para paginación
-    let total: number;
-    if (stateFilter === 'sent' || stateFilter === 'sale') {
-      // Para sent o sale, filtramos en JS desde allPending
-      total = allPending.filter((o) => states.includes(o.state)).length;
-    } else {
-      total = orders.length < limit ? offset + orders.length : offset + limit + 1;
-    }
+    const total = orders.length < limit ? offset + orders.length : offset + limit + 1;
 
     return NextResponse.json({
       orders,
@@ -75,7 +57,6 @@ export async function GET(req: NextRequest) {
       summary: {
         pendingCount,
         totalPendingAmount,
-        todayCount,
       },
     });
   } catch (error: any) {

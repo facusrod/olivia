@@ -140,16 +140,10 @@ export default function DashboardPage() {
   const loadPendingOrders = async () => {
     try {
       setPendingLoading(true);
-      const response = await fetch('/api/orders?state=sent,sale&limit=10');
+      const response = await fetch('/api/orders?state=pending&limit=5');
       if (!response.ok) throw new Error('Error al cargar pedidos');
       const result = await response.json();
-      // Filtrar: excluir pagados que ya fueron entregados completamente
-      const filtered = (result.orders as PendingOrder[]).filter((o) => {
-        if (o.state === 'sent') return true;
-        if (o.state === 'sale' && o.delivery_status === 'full') return false;
-        return true;
-      });
-      setPendingOrders(filtered.slice(0, 5));
+      setPendingOrders(result.orders);
       setPendingSummary(result.summary);
     } catch (error) {
       console.error('Error pedidos:', error);
