@@ -127,7 +127,6 @@ export async function GET(req: NextRequest) {
         orders: lastSnapshot.orders,
         inventory: lastSnapshot.inventory,
         products: lastSnapshot.products,
-        salesHeatmap: lastSnapshot.salesHeatmap || [],
         salesHistory,
         updatedAt: lastSnapshot.generatedAt,
       });
@@ -151,7 +150,6 @@ export async function GET(req: NextRequest) {
       orders: snapshot.orders,
       inventory: snapshot.inventory,
       products: snapshot.products,
-      salesHeatmap: snapshot.salesHeatmap || [],
       salesHistory: freshHistory,
       updatedAt: snapshot.generatedAt,
     });
@@ -194,7 +192,6 @@ export async function POST(req: NextRequest) {
       orders: snapshot.orders,
       inventory: snapshot.inventory,
       products: snapshot.products,
-      salesHeatmap: snapshot.salesHeatmap || [],
       salesHistory,
       updatedAt: snapshot.generatedAt,
     });
@@ -242,12 +239,6 @@ async function generateDashboardData() {
     ART_OFFSET, 0, 0
   ));
 
-  // Hace 7 días en Argentina (para heatmap)
-  const startOf7DaysAgo = new Date(Date.UTC(
-    todayArg.getUTCFullYear(), todayArg.getUTCMonth(), todayArg.getUTCDate() - 7,
-    ART_OFFSET, 0, 0
-  ));
-
   // Primer día del mes anterior en Argentina
   const startOfLastMonth = new Date(Date.UTC(
     todayArg.getUTCFullYear(), todayArg.getUTCMonth() - 1, 1,
@@ -274,8 +265,6 @@ async function generateDashboardData() {
     ecomMonth,
     posLastMonth,
     ecomLastMonth,
-    posTimestamps,
-    ecomTimestamps,
   ] = await Promise.all([
     limit(() => timed('getProductSalesRanking', odoo.getProductSalesRanking(30, 50, 50))),
     limit(() => timed('getExpiringProducts', odoo.getExpiringProducts(30, 50))),
@@ -308,15 +297,6 @@ async function generateDashboardData() {
       ['date_order', '<=', endOfLastMonth.toISOString()],
       ['state', 'in', confirmedStates],
     ]))),
-    // Timestamps para heatmap de ventas (últimos 7 días)
-    limit(() => timed('posTimestamps', odoo.getOrderTimestamps('pos.order', [
-      ['date_order', '>=', startOf7DaysAgo.toISOString()],
-      ['state', 'in', confirmedStates],
-    ]))),
-    limit(() => timed('ecomTimestamps', odoo.getOrderTimestamps('sale.order', [
-      ['date_order', '>=', startOf7DaysAgo.toISOString()],
-      ['state', 'in', confirmedStates],
-    ]))),
   ]);
 
   // Totales combinados (lectura directa, sin parsing de fechas)
@@ -337,9 +317,6 @@ async function generateDashboardData() {
 
   // Desestructurar ranking de ventas
   const { topSelling: topSellingProducts, leastSelling: leastSellingProducts } = salesRanking;
-
-  // Construir heatmap de ventas (hora × día de semana) con timestamps del último mes
-  const salesHeatmap = buildSalesHeatmap([...posTimestamps, ...ecomTimestamps]);
 
   console.log(`📊 Dashboard generado: ${totalProducts} productos, valor total: ${inventoryValue}`);
   console.log(`⏱️ TOTAL generateDashboardData: ${Date.now() - totalStart}ms`);
@@ -379,40 +356,5 @@ async function generateDashboardData() {
       slowMoving: leastSellingProducts,
       expiring: expiringProducts,
     },
-    salesHeatmap,
   };
-}
-
-/**
- * Construye una matriz de heatmap (16 filas × 7 columnas) a partir de timestamps de órdenes.
- * Filas: horas 07:00 a 22:00 (hora Argentina UTC-3)
- * Columnas: Lun(0) a Dom(6)
- */
-function buildSalesHeatmap(timestamps: string[]): number[][] {
-  const HOUR_START = 7;
-  const HOUR_END = 22;
-  const HOURS = HOUR_END - HOUR_START + 1; // 16 filas
-  const DAYS = 7;
-  const ART_OFFSET_MS = 3 * 3600000; // UTC-3
-
-  // Inicializar matriz en 0
-  const matrix: number[][] = Array.from({ length: HOURS }, () => Array(DAYS).fill(0));
-
-  for (const ts of timestamps) {
-    if (!ts) continue;
-    // Odoo timestamps pueden ser "YYYY-MM-DD HH:MM:SS" (sin Z) o ISO
-    const date = new Date(ts.includes('Z') || ts.includes('+') ? ts : ts + 'Z');
-    // Convertir UTC → Argentina (UTC-3)
-    const artTime = new Date(date.getTime() - ART_OFFSET_MS);
-    const hour = artTime.getUTCHours();
-    // getUTCDay: 0=Dom, 1=Lun ... 6=Sáb → convertir a 0=Lun, 6=Dom
-    const jsDay = artTime.getUTCDay();
-    const day = jsDay === 0 ? 6 : jsDay - 1;
-
-    if (hour >= HOUR_START && hour <= HOUR_END) {
-      matrix[hour - HOUR_START][day]++;
-    }
-  }
-
-  return matrix;
 }

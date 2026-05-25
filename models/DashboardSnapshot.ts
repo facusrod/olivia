@@ -42,7 +42,6 @@ export interface IDashboardSnapshot extends Document {
       daysUntilExpiration: number;
     }>;
   };
-  salesHeatmap: number[][];
   generatedAt: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -84,7 +83,6 @@ const DashboardSnapshotSchema = new Schema<IDashboardSnapshot>(
       slowMoving: { type: Schema.Types.Mixed, default: [] },
       expiring: { type: Schema.Types.Mixed, default: [] },
     },
-    salesHeatmap: { type: Schema.Types.Mixed, default: [] },
     generatedAt: { type: Date, required: true },
   },
   {

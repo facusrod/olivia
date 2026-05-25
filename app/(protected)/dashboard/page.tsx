@@ -25,7 +25,6 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import Modal from '@/components/Modal';
-import SalesHeatmap from '@/components/SalesHeatmap';
 import MonthlySalesChart from '@/components/MonthlySalesChart';
 import { useUserRole } from '@/lib/useUserRole';
 
@@ -64,7 +63,6 @@ interface DashboardData {
     slowMoving: Array<{ id: number; name: string; totalQty: number; qty_available: number }>;
     expiring: Array<{ id: number; name: string; totalQty: number; expirationDate: string; lotName: string; daysUntilExpiration: number }>;
   };
-  salesHeatmap?: number[][];
   salesHistory?: Array<{ month: string; pos: number; ecom: number; total: number }>;
   updatedAt: string;
 }
@@ -796,9 +794,7 @@ export default function DashboardPage() {
           <MonthlySalesChart data={data.salesHistory} />
         </div>
       )}
-      {isAdmin && data.salesHeatmap && data.salesHeatmap.length > 0 && (
-        <SalesHeatmap data={data.salesHeatmap} />
-      )}
+
 
       {/* Modal Ver Más */}
       {modalType && (() => {
