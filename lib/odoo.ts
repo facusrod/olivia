@@ -588,11 +588,14 @@ class OdooClient {
    */
   async getInventoryValue(): Promise<number> {
     const products = await this.executeKw('product.product', 'search_read', [[['qty_available', '>', 0]]], {
-      fields: ['list_price', 'qty_available'],
+      fields: ['list_price', 'standard_price', 'qty_available'],
       order: 'id asc', // Forzar orden por campo stored (el default de product.product usa qty_available que es computed)
     });
     return products.reduce(
-      (sum: number, p: any) => sum + (p.list_price * p.qty_available),
+      (sum: number, p: any) => {
+        const price = (p.standard_price > 0) ? p.standard_price : p.list_price;
+        return sum + (price * p.qty_available);
+      },
       0
     );
   }
