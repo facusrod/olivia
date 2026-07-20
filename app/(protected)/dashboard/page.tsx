@@ -61,7 +61,7 @@ interface DashboardData {
   products: {
     topSelling: Array<{ id: number; name: string; totalQty: number; qty_available: number }>;
     slowMoving: Array<{ id: number; name: string; totalQty: number; qty_available: number }>;
-    expiring: Array<{ id: number; name: string; totalQty: number; expirationDate: string; lotName: string; daysUntilExpiration: number }>;
+    expiring: Array<{ id: number; name: string; totalQty: number; expirationDate: string; lotName: string; daysUntilExpiration: number; totalValue: number }>;
   };
   salesHistory?: Array<{ month: string; pos: number; ecom: number; total: number }>;
   updatedAt: string;
@@ -371,6 +371,7 @@ export default function DashboardPage() {
             </>
           )}
           <p className={`text-xs mt-1 ${isExpired ? 'text-red-800 font-semibold' : 'text-gray-500'}`}>{product.totalQty} u.</p>
+          <p className={`text-xs ${isExpired ? 'text-red-800 font-semibold' : 'text-gray-500'}`}>{formatCurrency(product.totalValue)}</p>
         </div>
       </div>
     );

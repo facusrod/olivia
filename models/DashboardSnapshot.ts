@@ -40,6 +40,7 @@ export interface IDashboardSnapshot extends Document {
       expirationDate: string;
       lotName: string;
       daysUntilExpiration: number;
+      totalValue: number;
     }>;
   };
   generatedAt: Date;
