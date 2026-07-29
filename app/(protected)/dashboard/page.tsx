@@ -358,6 +358,12 @@ export default function DashboardPage() {
               <p className="text-lg font-bold text-red-800">{daysAgo}</p>
               <p className="text-xs text-red-800">{daysAgo === 1 ? 'día' : 'días'}</p>
             </>
+          ) : product.daysUntilExpiration === 0 ? (
+            <p className={`text-sm font-bold ${
+              isUrgent ? 'text-red-600' : isWarning ? 'text-orange-600' : 'text-yellow-600'
+            }`}>
+              Vence hoy
+            </p>
           ) : (
             <>
               <p className={`text-lg font-bold ${
