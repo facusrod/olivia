@@ -680,6 +680,38 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* Vencido por Categoría + Pedidos Pendientes, repartidos por igual */}
+      <div className={`grid grid-cols-1 gap-4 md:gap-6 ${
+        data.products.expiredByCategory && data.products.expiredByCategory.length > 0 ? 'lg:grid-cols-2 lg:items-start' : ''
+      }`}>
+        {data.products.expiredByCategory && data.products.expiredByCategory.length > 0 && (
+          <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-9 h-9 md:w-10 md:h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                <Layers className="w-4 h-4 md:w-5 md:h-5 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-base md:text-lg text-gray-900">Vencido por Categoría</h3>
+                <p className="text-xs md:text-sm text-gray-600">Este mes</p>
+              </div>
+            </div>
+
+            {/* Total arriba */}
+            <div className="mb-4 pb-4 border-b border-gray-100">
+              <p className="text-2xl md:text-3xl font-semibold text-gray-900">
+                {formatCurrency(data.inventory.expiredMonth?.value || 0)}
+              </p>
+              <p className="text-xs md:text-sm text-gray-500 mt-0.5">
+                vencido este mes · {data.inventory.expiredMonth?.qty || 0} u.
+              </p>
+            </div>
+
+            <ExpiredCategoryDonut categories={data.products.expiredByCategory} formatCurrency={formatCurrency} />
+          </div>
+        )}
+        {pedidosPendientesCard}
+      </div>
+
       {/* Grid de 3 columnas para productos */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
         {/* Productos Próximos a Vencer */}
@@ -778,38 +810,6 @@ export default function DashboardPage() {
             )}
           </div>
         </div>
-      </div>
-
-      {/* Vencido por Categoría + Pedidos Pendientes, repartidos por igual */}
-      <div className={`grid grid-cols-1 gap-4 md:gap-6 ${
-        data.products.expiredByCategory && data.products.expiredByCategory.length > 0 ? 'lg:grid-cols-2 lg:items-start' : ''
-      }`}>
-        {data.products.expiredByCategory && data.products.expiredByCategory.length > 0 && (
-          <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-9 h-9 md:w-10 md:h-10 bg-red-100 rounded-lg flex items-center justify-center">
-                <Layers className="w-4 h-4 md:w-5 md:h-5 text-red-600" />
-              </div>
-              <div>
-                <h3 className="text-base md:text-lg text-gray-900">Vencido por Categoría</h3>
-                <p className="text-xs md:text-sm text-gray-600">Este mes</p>
-              </div>
-            </div>
-
-            {/* Total arriba */}
-            <div className="mb-4 pb-4 border-b border-gray-100">
-              <p className="text-2xl md:text-3xl font-semibold text-gray-900">
-                {formatCurrency(data.inventory.expiredMonth?.value || 0)}
-              </p>
-              <p className="text-xs md:text-sm text-gray-500 mt-0.5">
-                vencido este mes · {data.inventory.expiredMonth?.qty || 0} u.
-              </p>
-            </div>
-
-            <ExpiredCategoryDonut categories={data.products.expiredByCategory} formatCurrency={formatCurrency} />
-          </div>
-        )}
-        {pedidosPendientesCard}
       </div>
 
       {/* Gráfico histórico y heatmap — solo admin */}
