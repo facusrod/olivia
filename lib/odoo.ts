@@ -292,12 +292,38 @@ class OdooClient {
         const priceData = await this.executeKw('product.product', 'search_read', [
           [['id', 'in', productIds]],
         ], {
-          fields: ['standard_price', 'list_price', 'categ_id'],
+          fields: ['standard_price', 'list_price', 'public_categ_ids'],
         });
 
+        // La categoría interna (categ_id) no la usan: cargan la categoría real
+        // en "Categorías" de la tienda web (public_categ_ids, many2many).
+        // Un producto puede tener varias (ej: "Infusiones" + "Sin Gluten");
+        // tomamos solo la primera como categoría representativa.
+        const firstCategIdByProduct: { [key: number]: number } = {};
+        const categIds = new Set<number>();
         for (const p of priceData) {
           priceById[p.id] = (p.standard_price > 0) ? p.standard_price : p.list_price;
-          categoryById[p.id] = p.categ_id ? p.categ_id[1] : 'Sin categoría';
+          const firstCategId = p.public_categ_ids?.[0];
+          if (firstCategId) {
+            firstCategIdByProduct[p.id] = firstCategId;
+            categIds.add(firstCategId);
+          }
+        }
+
+        if (categIds.size > 0) {
+          const categories = await this.executeKw('product.public.category', 'search_read', [
+            [['id', 'in', [...categIds]]],
+          ], {
+            fields: ['name'],
+          });
+          const categNameById: { [key: number]: string } = {};
+          for (const c of categories) {
+            categNameById[c.id] = c.name;
+          }
+          for (const p of priceData) {
+            const firstCategId = firstCategIdByProduct[p.id];
+            categoryById[p.id] = firstCategId ? (categNameById[firstCategId] || 'Sin categoría') : 'Sin categoría';
+          }
         }
       }
 
