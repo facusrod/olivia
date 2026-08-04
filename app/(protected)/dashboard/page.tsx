@@ -684,6 +684,7 @@ export default function DashboardPage() {
       <div className={`grid grid-cols-1 gap-4 md:gap-6 ${
         data.products.expiredByCategory && data.products.expiredByCategory.length > 0 ? 'lg:grid-cols-2 lg:items-start' : ''
       }`}>
+        {pedidosPendientesCard}
         {data.products.expiredByCategory && data.products.expiredByCategory.length > 0 && (
           <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6">
             <div className="flex items-center gap-3 mb-4">
@@ -709,7 +710,6 @@ export default function DashboardPage() {
             <ExpiredCategoryDonut categories={data.products.expiredByCategory} formatCurrency={formatCurrency} />
           </div>
         )}
-        {pedidosPendientesCard}
       </div>
 
       {/* Grid de 3 columnas para productos */}
