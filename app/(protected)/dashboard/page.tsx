@@ -667,27 +667,17 @@ export default function DashboardPage() {
       </button>
 
       {isAdmin ? (
-        <>
-          {/* Admin: 4 tarjetas + pedidos pendientes debajo */}
-          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
-            {ventasDiaCard}
-            {ventasMesCard}
-            {ticketPromedioCard}
-            {valorInventarioCard}
-          </div>
-          {pedidosPendientesCard}
-        </>
+        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
+          {ventasDiaCard}
+          {ventasMesCard}
+          {ticketPromedioCard}
+          {valorInventarioCard}
+        </div>
       ) : (
-        <>
-          {/* User: tarjetas a la izquierda, pedidos a la derecha */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-6 lg:items-start">
-            <div className="grid grid-cols-2 gap-3 md:gap-6 content-start">
-              {ventasDiaCard}
-              {ticketPromedioCard}
-            </div>
-            {pedidosPendientesCard}
-          </div>
-        </>
+        <div className="grid grid-cols-2 gap-3 md:gap-6">
+          {ventasDiaCard}
+          {ticketPromedioCard}
+        </div>
       )}
 
       {/* Grid de 3 columnas para productos */}
@@ -715,11 +705,6 @@ export default function DashboardPage() {
               </button>
             )}
           </div>
-          {data.inventory.expiredMonth?.value > 0 && (
-            <p className="text-sm md:text-base text-gray-900 font-semibold mb-3 md:mb-4">
-              {formatCurrency(data.inventory.expiredMonth.value)} vencido este mes
-            </p>
-          )}
           <div className="space-y-3 max-h-[420px] overflow-y-auto">
             {data.products.expiring.length === 0 ? (
               <div className="text-center py-6 md:py-8 text-gray-500">
@@ -795,9 +780,11 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Vencido por Categoría */}
-      {data.products.expiredByCategory && data.products.expiredByCategory.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+      {/* Vencido por Categoría + Pedidos Pendientes, repartidos por igual */}
+      <div className={`grid grid-cols-1 gap-4 md:gap-6 ${
+        data.products.expiredByCategory && data.products.expiredByCategory.length > 0 ? 'lg:grid-cols-2 lg:items-start' : ''
+      }`}>
+        {data.products.expiredByCategory && data.products.expiredByCategory.length > 0 && (
           <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-9 h-9 md:w-10 md:h-10 bg-red-100 rounded-lg flex items-center justify-center">
@@ -821,8 +808,9 @@ export default function DashboardPage() {
 
             <ExpiredCategoryDonut categories={data.products.expiredByCategory} formatCurrency={formatCurrency} />
           </div>
-        </div>
-      )}
+        )}
+        {pedidosPendientesCard}
+      </div>
 
       {/* Gráfico histórico y heatmap — solo admin */}
       {isAdmin && data.salesHistory && data.salesHistory.length > 0 && (
