@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import Modal from '@/components/Modal';
 import MonthlySalesChart from '@/components/MonthlySalesChart';
+import ExpiredCategoryDonut from '@/components/ExpiredCategoryDonut';
 import { useUserRole } from '@/lib/useUserRole';
 
 interface DashboardData {
@@ -796,34 +797,29 @@ export default function DashboardPage() {
 
       {/* Vencido por Categoría */}
       {data.products.expiredByCategory && data.products.expiredByCategory.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6">
-          <div className="flex items-center gap-3 mb-4 md:mb-6">
-            <div className="w-9 h-9 md:w-10 md:h-10 bg-red-100 rounded-lg flex items-center justify-center">
-              <Layers className="w-4 h-4 md:w-5 md:h-5 text-red-600" />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+          <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-9 h-9 md:w-10 md:h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                <Layers className="w-4 h-4 md:w-5 md:h-5 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-base md:text-lg text-gray-900">Vencido por Categoría</h3>
+                <p className="text-xs md:text-sm text-gray-600">Este mes</p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-base md:text-lg text-gray-900">Vencido por Categoría</h3>
-              <p className="text-xs md:text-sm text-gray-600">Este mes</p>
+
+            {/* Total arriba */}
+            <div className="mb-4 pb-4 border-b border-gray-100">
+              <p className="text-2xl md:text-3xl font-semibold text-gray-900">
+                {formatCurrency(data.inventory.expiredMonth?.value || 0)}
+              </p>
+              <p className="text-xs md:text-sm text-gray-500 mt-0.5">
+                vencido este mes · {data.inventory.expiredMonth?.qty || 0} u.
+              </p>
             </div>
-          </div>
-          <div className="space-y-3">
-            {data.products.expiredByCategory.slice(0, 8).map((cat) => {
-              const maxValue = data.products.expiredByCategory![0].value;
-              const pct = maxValue > 0 ? (cat.value / maxValue) * 100 : 0;
-              return (
-                <div key={cat.category}>
-                  <div className="flex items-center justify-between text-xs md:text-sm mb-1">
-                    <span className="text-gray-900 font-medium truncate">{cat.category}</span>
-                    <span className="text-gray-600 flex-shrink-0 ml-2">
-                      {formatCurrency(cat.value)} · {cat.qty} u.
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-100 rounded-full h-2">
-                    <div className="bg-red-400 h-2 rounded-full" style={{ width: `${pct}%` }} />
-                  </div>
-                </div>
-              );
-            })}
+
+            <ExpiredCategoryDonut categories={data.products.expiredByCategory} formatCurrency={formatCurrency} />
           </div>
         </div>
       )}
