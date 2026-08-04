@@ -29,8 +29,6 @@ const ExpiredProductSnapshotSchema = new Schema<IExpiredProductSnapshot>(
   { timestamps: true }
 );
 
-ExpiredProductSnapshotSchema.index({ date: 1 });
-
 const ExpiredProductSnapshot: Model<IExpiredProductSnapshot> =
   mongoose.models.ExpiredProductSnapshot ||
   mongoose.model<IExpiredProductSnapshot>('ExpiredProductSnapshot', ExpiredProductSnapshotSchema);
