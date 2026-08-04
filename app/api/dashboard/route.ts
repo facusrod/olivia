@@ -24,15 +24,20 @@ async function getSalesHistory() {
   return MonthlySalesHistory.find().sort({ month: 1 }).lean();
 }
 
+/** Mes actual en formato "YYYY-MM", en hora Argentina. */
+function getCurrentMonthArg(): string {
+  const ART_OFFSET = 3;
+  const todayArg = new Date(Date.now() - ART_OFFSET * 3600000);
+  return `${todayArg.getUTCFullYear()}-${String(todayArg.getUTCMonth() + 1).padStart(2, '0')}`;
+}
+
 /**
  * Suma qty/valor de los snapshots diarios de vencidos del mes actual (hora Argentina).
  * Los snapshots ya existen antes de que el producto sea descartado en Odoo (ver cron
  * /api/cron/expired-products), así que esto no depende de una consulta en vivo a Odoo.
  */
 async function getExpiredMonthTotal(): Promise<{ qty: number; value: number }> {
-  const ART_OFFSET = 3;
-  const todayArg = new Date(Date.now() - ART_OFFSET * 3600000);
-  const monthStr = `${todayArg.getUTCFullYear()}-${String(todayArg.getUTCMonth() + 1).padStart(2, '0')}`;
+  const monthStr = getCurrentMonthArg();
 
   const result = await ExpiredProductSnapshot.aggregate([
     { $match: { date: { $regex: `^${monthStr}` } } },
@@ -40,6 +45,26 @@ async function getExpiredMonthTotal(): Promise<{ qty: number; value: number }> {
   ]);
 
   return result[0] ? { qty: result[0].qty, value: result[0].value } : { qty: 0, value: 0 };
+}
+
+/** Desglose por categoría de los vencidos del mes actual, ordenado de mayor a menor valor. */
+async function getExpiredCategoryBreakdown(): Promise<Array<{ category: string; qty: number; value: number }>> {
+  const monthStr = getCurrentMonthArg();
+
+  const result = await ExpiredProductSnapshot.aggregate([
+    { $match: { date: { $regex: `^${monthStr}` } } },
+    { $unwind: '$items' },
+    {
+      $group: {
+        _id: { $ifNull: ['$items.category', 'Sin categoría'] },
+        qty: { $sum: '$items.qty' },
+        value: { $sum: '$items.totalValue' },
+      },
+    },
+    { $sort: { value: -1 } },
+  ]);
+
+  return result.map((r) => ({ category: r._id, qty: r.qty, value: r.value }));
 }
 
 /**
@@ -152,15 +177,17 @@ export async function GET(req: NextRequest) {
     }
 
     // No hay snapshot, generar el primero automáticamente
-    const [data, , expiredMonth] = await Promise.all([
+    const [data, , expiredMonth, expiredByCategory] = await Promise.all([
       generateDashboardData(),
       syncMonthlySalesHistory(),
       getExpiredMonthTotal(),
+      getExpiredCategoryBreakdown(),
     ]);
 
     const snapshot = await DashboardSnapshot.create({
       ...data,
       inventory: { ...data.inventory, expiredMonth },
+      products: { ...data.products, expiredByCategory },
       generatedAt: new Date(),
     });
 
@@ -196,15 +223,17 @@ export async function POST(req: NextRequest) {
     await connectDB();
 
     // Ambas operaciones en paralelo: dashboard metrics + historial mensual
-    const [data, , expiredMonth] = await Promise.all([
+    const [data, , expiredMonth, expiredByCategory] = await Promise.all([
       generateDashboardData(),
       syncMonthlySalesHistory(),
       getExpiredMonthTotal(),
+      getExpiredCategoryBreakdown(),
     ]);
 
     const snapshot = await DashboardSnapshot.create({
       ...data,
       inventory: { ...data.inventory, expiredMonth },
+      products: { ...data.products, expiredByCategory },
       generatedAt: new Date(),
     });
 

@@ -23,6 +23,7 @@ import {
   ExternalLink,
   ChevronLeft,
   ChevronRight,
+  Layers,
 } from 'lucide-react';
 import Modal from '@/components/Modal';
 import MonthlySalesChart from '@/components/MonthlySalesChart';
@@ -63,6 +64,7 @@ interface DashboardData {
     topSelling: Array<{ id: number; name: string; totalQty: number; qty_available: number }>;
     slowMoving: Array<{ id: number; name: string; totalQty: number; qty_available: number }>;
     expiring: Array<{ id: number; name: string; totalQty: number; expirationDate: string; lotName: string; daysUntilExpiration: number; totalValue: number }>;
+    expiredByCategory?: Array<{ category: string; qty: number; value: number }>;
   };
   salesHistory?: Array<{ month: string; pos: number; ecom: number; total: number }>;
   updatedAt: string;
@@ -703,22 +705,20 @@ export default function DashboardPage() {
                 <p className="text-xs md:text-sm text-gray-600">Vencidos + próximos 30 días</p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              {data.inventory.expiredMonth?.value > 0 && (
-                <span className="text-xs md:text-sm text-red-600 font-semibold hidden sm:inline">
-                  {formatCurrency(data.inventory.expiredMonth.value)} vencido este mes
-                </span>
-              )}
-              {data.products.expiring.length > 10 && (
-                <button
-                  onClick={() => openModal('expiring')}
-                  className="text-xs text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1"
-                >
-                  <ArrowUpRight className="w-4 h-4" />
-                </button>
-              )}
-            </div>
+            {data.products.expiring.length > 10 && (
+              <button
+                onClick={() => openModal('expiring')}
+                className="text-xs text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1"
+              >
+                <ArrowUpRight className="w-4 h-4" />
+              </button>
+            )}
           </div>
+          {data.inventory.expiredMonth?.value > 0 && (
+            <p className="text-sm md:text-base text-gray-900 font-semibold mb-3 md:mb-4">
+              {formatCurrency(data.inventory.expiredMonth.value)} vencido este mes
+            </p>
+          )}
           <div className="space-y-3 max-h-[420px] overflow-y-auto">
             {data.products.expiring.length === 0 ? (
               <div className="text-center py-6 md:py-8 text-gray-500">
@@ -793,6 +793,40 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Vencido por Categoría */}
+      {data.products.expiredByCategory && data.products.expiredByCategory.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6">
+          <div className="flex items-center gap-3 mb-4 md:mb-6">
+            <div className="w-9 h-9 md:w-10 md:h-10 bg-red-100 rounded-lg flex items-center justify-center">
+              <Layers className="w-4 h-4 md:w-5 md:h-5 text-red-600" />
+            </div>
+            <div>
+              <h3 className="text-base md:text-lg text-gray-900">Vencido por Categoría</h3>
+              <p className="text-xs md:text-sm text-gray-600">Este mes</p>
+            </div>
+          </div>
+          <div className="space-y-3">
+            {data.products.expiredByCategory.slice(0, 8).map((cat) => {
+              const maxValue = data.products.expiredByCategory![0].value;
+              const pct = maxValue > 0 ? (cat.value / maxValue) * 100 : 0;
+              return (
+                <div key={cat.category}>
+                  <div className="flex items-center justify-between text-xs md:text-sm mb-1">
+                    <span className="text-gray-900 font-medium truncate">{cat.category}</span>
+                    <span className="text-gray-600 flex-shrink-0 ml-2">
+                      {formatCurrency(cat.value)} · {cat.qty} u.
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-100 rounded-full h-2">
+                    <div className="bg-red-400 h-2 rounded-full" style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Gráfico histórico y heatmap — solo admin */}
       {isAdmin && data.salesHistory && data.salesHistory.length > 0 && (

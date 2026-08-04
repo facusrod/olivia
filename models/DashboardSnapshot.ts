@@ -46,6 +46,7 @@ export interface IDashboardSnapshot extends Document {
       daysUntilExpiration: number;
       totalValue: number;
     }>;
+    expiredByCategory: Array<{ category: string; qty: number; value: number }>;
   };
   generatedAt: Date;
   createdAt: Date;
@@ -91,6 +92,7 @@ const DashboardSnapshotSchema = new Schema<IDashboardSnapshot>(
       topSelling: { type: Schema.Types.Mixed, default: [] },
       slowMoving: { type: Schema.Types.Mixed, default: [] },
       expiring: { type: Schema.Types.Mixed, default: [] },
+      expiredByCategory: { type: Schema.Types.Mixed, default: [] },
     },
     generatedAt: { type: Date, required: true },
   },

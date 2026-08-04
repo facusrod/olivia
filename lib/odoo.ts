@@ -286,22 +286,25 @@ class OdooClient {
 
       const productIds = [...new Set(sorted.map(p => p.id))];
       const priceById: { [key: number]: number } = {};
+      const categoryById: { [key: number]: string } = {};
 
       if (productIds.length > 0) {
         const priceData = await this.executeKw('product.product', 'search_read', [
           [['id', 'in', productIds]],
         ], {
-          fields: ['standard_price', 'list_price'],
+          fields: ['standard_price', 'list_price', 'categ_id'],
         });
 
         for (const p of priceData) {
           priceById[p.id] = (p.standard_price > 0) ? p.standard_price : p.list_price;
+          categoryById[p.id] = p.categ_id ? p.categ_id[1] : 'Sin categoría';
         }
       }
 
       return sorted.map(product => ({
         ...product,
         totalValue: (priceById[product.id] || 0) * product.totalQty,
+        category: categoryById[product.id] || 'Sin categoría',
       }));
 
     } catch (error: any) {

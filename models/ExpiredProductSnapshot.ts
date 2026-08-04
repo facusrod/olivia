@@ -3,6 +3,7 @@ import mongoose, { Schema, Document, Model } from 'mongoose';
 export interface IExpiredProductSnapshotItem {
   productId: number;
   name: string;
+  category: string;
   lotName: string;
   qty: number;
   unitCost: number;

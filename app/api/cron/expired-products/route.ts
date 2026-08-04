@@ -34,6 +34,7 @@ export async function GET(req: NextRequest) {
   const items = expired.map((p) => ({
     productId: p.id,
     name: p.name,
+    category: p.category,
     lotName: p.lotName,
     qty: p.totalQty,
     unitCost: p.totalQty > 0 ? p.totalValue / p.totalQty : 0,
