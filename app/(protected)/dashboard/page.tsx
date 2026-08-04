@@ -556,7 +556,7 @@ export default function DashboardPage() {
   );
 
   const pedidosPendientesCard = (
-    <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6">
+    <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6 h-full flex flex-col">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 md:w-10 md:h-10 bg-orange-100 rounded-lg flex items-center justify-center">
@@ -591,11 +591,11 @@ export default function DashboardPage() {
       </div>
 
       {pendingLoading ? (
-        <div className="flex items-center justify-center py-8">
+        <div className="flex-1 flex items-center justify-center">
           <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
         </div>
       ) : pendingOrders.length === 0 ? (
-        <div className="text-center py-6 text-gray-500">
+        <div className="flex-1 flex flex-col items-center justify-center text-center text-gray-500">
           <ClipboardList className="w-10 h-10 mx-auto mb-3 text-gray-300" />
           <p className="text-sm">No hay pedidos pendientes</p>
         </div>
@@ -682,7 +682,7 @@ export default function DashboardPage() {
 
       {/* Vencido por Categoría + Pedidos Pendientes, repartidos por igual */}
       <div className={`grid grid-cols-1 gap-4 md:gap-6 ${
-        data.products.expiredByCategory && data.products.expiredByCategory.length > 0 ? 'lg:grid-cols-2 lg:items-start' : ''
+        data.products.expiredByCategory && data.products.expiredByCategory.length > 0 ? 'lg:grid-cols-2' : ''
       }`}>
         {pedidosPendientesCard}
         {data.products.expiredByCategory && data.products.expiredByCategory.length > 0 && (
