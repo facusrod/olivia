@@ -29,6 +29,10 @@ export interface IDashboardSnapshot extends Document {
     totalValue: number;
     expiringSoon: number;
     totalProducts: number;
+    expiredMonth: {
+      qty: number;
+      value: number;
+    };
   };
   products: {
     topSelling: Array<{ id: number; name: string; totalQty: number; qty_available: number }>;
@@ -78,6 +82,10 @@ const DashboardSnapshotSchema = new Schema<IDashboardSnapshot>(
       totalValue: { type: Number, default: 0 },
       expiringSoon: { type: Number, default: 0 },
       totalProducts: { type: Number, default: 0 },
+      expiredMonth: {
+        qty: { type: Number, default: 0 },
+        value: { type: Number, default: 0 },
+      },
     },
     products: {
       topSelling: { type: Schema.Types.Mixed, default: [] },

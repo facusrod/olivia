@@ -5,6 +5,7 @@ import { getOdooClient } from '@/lib/odoo';
 import connectDB from '@/lib/mongodb';
 import DashboardSnapshot from '@/models/DashboardSnapshot';
 import MonthlySalesHistory from '@/models/MonthlySalesHistory';
+import ExpiredProductSnapshot from '@/models/ExpiredProductSnapshot';
 import pLimit from 'p-limit';
 
 /**
@@ -21,6 +22,24 @@ function timed<T>(label: string, promise: Promise<T>): Promise<T> {
 /** Retorna el historial mensual guardado en MongoDB, ordenado por mes ascendente. */
 async function getSalesHistory() {
   return MonthlySalesHistory.find().sort({ month: 1 }).lean();
+}
+
+/**
+ * Suma qty/valor de los snapshots diarios de vencidos del mes actual (hora Argentina).
+ * Los snapshots ya existen antes de que el producto sea descartado en Odoo (ver cron
+ * /api/cron/expired-products), así que esto no depende de una consulta en vivo a Odoo.
+ */
+async function getExpiredMonthTotal(): Promise<{ qty: number; value: number }> {
+  const ART_OFFSET = 3;
+  const todayArg = new Date(Date.now() - ART_OFFSET * 3600000);
+  const monthStr = `${todayArg.getUTCFullYear()}-${String(todayArg.getUTCMonth() + 1).padStart(2, '0')}`;
+
+  const result = await ExpiredProductSnapshot.aggregate([
+    { $match: { date: { $regex: `^${monthStr}` } } },
+    { $group: { _id: null, qty: { $sum: '$totalQty' }, value: { $sum: '$totalValue' } } },
+  ]);
+
+  return result[0] ? { qty: result[0].qty, value: result[0].value } : { qty: 0, value: 0 };
 }
 
 /**
@@ -133,13 +152,15 @@ export async function GET(req: NextRequest) {
     }
 
     // No hay snapshot, generar el primero automáticamente
-    const [data] = await Promise.all([
+    const [data, , expiredMonth] = await Promise.all([
       generateDashboardData(),
       syncMonthlySalesHistory(),
+      getExpiredMonthTotal(),
     ]);
 
     const snapshot = await DashboardSnapshot.create({
       ...data,
+      inventory: { ...data.inventory, expiredMonth },
       generatedAt: new Date(),
     });
 
@@ -175,13 +196,15 @@ export async function POST(req: NextRequest) {
     await connectDB();
 
     // Ambas operaciones en paralelo: dashboard metrics + historial mensual
-    const [data] = await Promise.all([
+    const [data, , expiredMonth] = await Promise.all([
       generateDashboardData(),
       syncMonthlySalesHistory(),
+      getExpiredMonthTotal(),
     ]);
 
     const snapshot = await DashboardSnapshot.create({
       ...data,
+      inventory: { ...data.inventory, expiredMonth },
       generatedAt: new Date(),
     });
 

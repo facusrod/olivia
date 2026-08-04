@@ -57,6 +57,7 @@ interface DashboardData {
     totalValue: number;
     expiringSoon: number;
     totalProducts: number;
+    expiredMonth: { qty: number; value: number };
   };
   products: {
     topSelling: Array<{ id: number; name: string; totalQty: number; qty_available: number }>;
@@ -702,14 +703,21 @@ export default function DashboardPage() {
                 <p className="text-xs md:text-sm text-gray-600">Vencidos + próximos 30 días</p>
               </div>
             </div>
-            {data.products.expiring.length > 10 && (
-              <button
-                onClick={() => openModal('expiring')}
-                className="text-xs text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1"
-              >
-                <ArrowUpRight className="w-4 h-4" />
-              </button>
-            )}
+            <div className="flex items-center gap-3">
+              {data.inventory.expiredMonth?.value > 0 && (
+                <span className="text-xs md:text-sm text-red-600 font-semibold hidden sm:inline">
+                  {formatCurrency(data.inventory.expiredMonth.value)} vencido este mes
+                </span>
+              )}
+              {data.products.expiring.length > 10 && (
+                <button
+                  onClick={() => openModal('expiring')}
+                  className="text-xs text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1"
+                >
+                  <ArrowUpRight className="w-4 h-4" />
+                </button>
+              )}
+            </div>
           </div>
           <div className="space-y-3 max-h-[420px] overflow-y-auto">
             {data.products.expiring.length === 0 ? (
