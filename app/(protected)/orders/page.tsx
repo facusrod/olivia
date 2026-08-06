@@ -11,6 +11,8 @@ import {
   Clock,
   ExternalLink,
 } from 'lucide-react';
+import Switch from '@/components/Switch';
+import { usePushNotifications } from '@/lib/usePushNotifications';
 
 interface EcommerceOrder {
   id: number;
@@ -69,6 +71,7 @@ export default function OrdersPage() {
   const [hasMore, setHasMore] = useState(false);
   const [activeTab, setActiveTab] = useState<TabFilter>('sent');
   const router = useRouter();
+  const pushNotifications = usePushNotifications();
 
   const ordersPerPage = 20;
 
@@ -141,13 +144,32 @@ export default function OrdersPage() {
               <div className="w-9 h-9 md:w-12 md:h-12 bg-blue-100 rounded-lg flex items-center justify-center">
                 <ShoppingCart className="w-4 h-4 md:w-6 md:h-6 text-blue-600" />
               </div>
-              {summary.pendingCount > 0 && (
-                <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse" />
-              )}
+              <div className="flex items-center gap-2">
+                {summary.pendingCount > 0 && (
+                  <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse" />
+                )}
+                {pushNotifications.isSupported && (
+                  <Switch
+                    checked={pushNotifications.isSubscribed}
+                    onChange={pushNotifications.needsIOSInstall ? () => {} : pushNotifications.toggle}
+                    disabled={pushNotifications.loading}
+                    title={
+                      pushNotifications.needsIOSInstall
+                        ? 'En iPhone: Compartir → Agregar a pantalla de inicio para poder activarlas'
+                        : pushNotifications.isSubscribed
+                        ? 'Notificaciones activadas — click para desactivar'
+                        : 'Activar notificaciones de nuevos pedidos'
+                    }
+                  />
+                )}
+              </div>
             </div>
             <h3 className="text-xs md:text-sm font-medium text-gray-600 mb-1">Pendientes</h3>
             <p className="text-xl md:text-3xl text-gray-900">{summary.pendingCount}</p>
             <p className="text-xs text-gray-500 mt-1 md:mt-2 hidden sm:block">Sin pagar + por preparar</p>
+            {pushNotifications.error && (
+              <p className="text-xs text-red-600 mt-1">{pushNotifications.error}</p>
+            )}
           </div>
 
           <div className="bg-white rounded-xl border border-gray-200 p-3 md:p-6 hover:shadow-lg transition-shadow">

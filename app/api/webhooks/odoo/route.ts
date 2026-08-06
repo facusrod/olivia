@@ -40,6 +40,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
+  console.log(
+    '[webhooks/odoo] payload recibido:',
+    JSON.stringify(payload),
+    '| auth via:', authHeader ? 'header' : querySecret ? 'query param' : 'ninguno'
+  );
+
   const orderId = payload.id ?? payload.order_id;
   if (orderId === undefined || orderId === null) {
     return NextResponse.json({ error: 'Missing order id' }, { status: 400 });
