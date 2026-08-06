@@ -31,13 +31,12 @@ self.addEventListener('notificationclick', (event) => {
       const existing = clientList[0];
 
       if (existing) {
-        try {
-          const navigated = await existing.navigate(targetUrl);
-          await (navigated || existing).focus();
-          return;
-        } catch (err) {
-          // navigate() no soportado o fallo (comun en Safari/iOS) - abrimos ventana nueva.
-        }
+        // WindowClient.navigate() tiene soporte muy erratico en Safari/iOS -
+        // en vez de eso le avisamos a la pagina por postMessage y que ella
+        // haga el router.push() del lado del cliente.
+        existing.postMessage({ type: 'olivia-navigate', url: path });
+        await existing.focus();
+        return;
       }
 
       await self.clients.openWindow(targetUrl);
