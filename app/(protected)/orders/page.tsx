@@ -129,11 +129,41 @@ export default function OrdersPage() {
   return (
     <div className="p-4 md:p-6 space-y-4 md:space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-xl md:text-2xl text-gray-900">Pedidos Web</h1>
-        <p className="text-sm md:text-base text-gray-600 mt-1">
-          Pedidos del ecommerce pendientes de preparar
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-xl md:text-2xl text-gray-900">Pedidos Web</h1>
+          <p className="text-sm md:text-base text-gray-600 mt-1">
+            Pedidos del ecommerce pendientes de preparar
+          </p>
+        </div>
+        {(pushNotifications.isSupported || pushNotifications.needsIOSInstall) && (
+          <div className="flex flex-col items-end gap-1 flex-shrink-0">
+            {pushNotifications.needsIOSInstall ? (
+              <p className="text-xs text-gray-500 text-right max-w-[160px]">
+                📲 Agregá la app a tu pantalla de inicio para recibir notificaciones
+              </p>
+            ) : (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-500 hidden sm:inline">
+                  {pushNotifications.isSubscribed ? 'Notificaciones activadas' : 'Notificaciones'}
+                </span>
+                <Switch
+                  checked={pushNotifications.isSubscribed}
+                  onChange={pushNotifications.toggle}
+                  disabled={pushNotifications.loading}
+                  title={
+                    pushNotifications.isSubscribed
+                      ? 'Notificaciones activadas — click para desactivar'
+                      : 'Activar notificaciones de nuevos pedidos'
+                  }
+                />
+              </div>
+            )}
+            {pushNotifications.error && (
+              <p className="text-xs text-red-600 text-right max-w-[180px]">{pushNotifications.error}</p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Tarjetas resumen */}
@@ -144,32 +174,13 @@ export default function OrdersPage() {
               <div className="w-9 h-9 md:w-12 md:h-12 bg-blue-100 rounded-lg flex items-center justify-center">
                 <ShoppingCart className="w-4 h-4 md:w-6 md:h-6 text-blue-600" />
               </div>
-              <div className="flex items-center gap-2">
-                {summary.pendingCount > 0 && (
-                  <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse" />
-                )}
-                {pushNotifications.isSupported && (
-                  <Switch
-                    checked={pushNotifications.isSubscribed}
-                    onChange={pushNotifications.needsIOSInstall ? () => {} : pushNotifications.toggle}
-                    disabled={pushNotifications.loading}
-                    title={
-                      pushNotifications.needsIOSInstall
-                        ? 'En iPhone: Compartir → Agregar a pantalla de inicio para poder activarlas'
-                        : pushNotifications.isSubscribed
-                        ? 'Notificaciones activadas — click para desactivar'
-                        : 'Activar notificaciones de nuevos pedidos'
-                    }
-                  />
-                )}
-              </div>
+              {summary.pendingCount > 0 && (
+                <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse" />
+              )}
             </div>
             <h3 className="text-xs md:text-sm font-medium text-gray-600 mb-1">Pendientes</h3>
             <p className="text-xl md:text-3xl text-gray-900">{summary.pendingCount}</p>
             <p className="text-xs text-gray-500 mt-1 md:mt-2 hidden sm:block">Sin pagar + por preparar</p>
-            {pushNotifications.error && (
-              <p className="text-xs text-red-600 mt-1">{pushNotifications.error}</p>
-            )}
           </div>
 
           <div className="bg-white rounded-xl border border-gray-200 p-3 md:p-6 hover:shadow-lg transition-shadow">

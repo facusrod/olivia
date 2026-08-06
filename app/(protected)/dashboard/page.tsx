@@ -619,7 +619,7 @@ export default function DashboardPage() {
         <div className="flex-1 flex flex-col items-center justify-center text-center text-gray-500">
           <ClipboardList className="w-10 h-10 mx-auto mb-3 text-gray-300" />
           <p className="text-sm">No hay pedidos pendientes</p>
-          {pushNotifications.isSupported && pushNotifications.needsIOSInstall && (
+          {pushNotifications.needsIOSInstall && (
             <p className="text-xs text-gray-400 mt-2 max-w-[220px]">
               📲 Agregá OlivIA a tu pantalla de inicio para recibir notificaciones de nuevos pedidos
             </p>
