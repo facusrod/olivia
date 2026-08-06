@@ -8,6 +8,7 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "OlivIA - Asistente para Tienda de Productos Saludables",
   description: "Sistema inteligente para gestión de inventario y ventas",
+  manifest: "/manifest.json",
 };
 
 export const viewport: Viewport = {

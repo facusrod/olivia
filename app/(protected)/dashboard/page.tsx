@@ -24,11 +24,14 @@ import {
   ChevronLeft,
   ChevronRight,
   Layers,
+  Bell,
+  BellRing,
 } from 'lucide-react';
 import Modal from '@/components/Modal';
 import MonthlySalesChart from '@/components/MonthlySalesChart';
 import ExpiredCategoryDonut from '@/components/ExpiredCategoryDonut';
 import { useUserRole } from '@/lib/useUserRole';
+import { usePushNotifications } from '@/lib/usePushNotifications';
 
 interface DashboardData {
   sales: {
@@ -93,6 +96,7 @@ export default function DashboardPage() {
   const [modalPage, setModalPage] = useState(1);
   const router = useRouter();
   const { isAdmin } = useUserRole();
+  const pushNotifications = usePushNotifications();
 
   useEffect(() => {
     loadDashboard();
@@ -570,6 +574,27 @@ export default function DashboardPage() {
           </div>
         </div>
         <div className="flex items-center gap-3">
+          {pushNotifications.isSupported && pushNotifications.permission !== 'granted' && (
+            <button
+              onClick={pushNotifications.needsIOSInstall ? undefined : pushNotifications.subscribe}
+              disabled={pushNotifications.loading}
+              title={
+                pushNotifications.needsIOSInstall
+                  ? 'En iPhone: Compartir → Agregar a pantalla de inicio para poder activarlas'
+                  : 'Activar notificaciones de nuevos pedidos'
+              }
+              className={`p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors ${
+                pushNotifications.needsIOSInstall ? 'cursor-help' : ''
+              }`}
+            >
+              <Bell className="w-4 h-4" />
+            </button>
+          )}
+          {pushNotifications.permission === 'granted' && (
+            <span title="Notificaciones activadas">
+              <BellRing className="w-4 h-4 text-primary-600" />
+            </span>
+          )}
           {pendingSummary && pendingSummary.pendingCount > 0 && (
             <span className="text-xs md:text-sm text-gray-500 hidden sm:inline">
               {formatCurrency(pendingSummary.totalPendingAmount)}
