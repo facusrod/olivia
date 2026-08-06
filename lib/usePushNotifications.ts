@@ -21,6 +21,7 @@ function isStandalone(): boolean {
 
 export function usePushNotifications() {
   const [permission, setPermission] = useState<NotificationPermission | 'unsupported'>('default');
+  const [isSubscribed, setIsSubscribed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,8 +34,16 @@ export function usePushNotifications() {
       return;
     }
     setPermission(Notification.permission);
+
+    (async () => {
+      const registration = await navigator.serviceWorker.getRegistration();
+      const subscription = await registration?.pushManager.getSubscription();
+      setIsSubscribed(!!subscription);
+    })();
   }, [isSupported]);
 
+  // Activa (o re-sincroniza con el backend, aunque el permiso ya estuviera
+  // concedido de antes) la suscripcion actual.
   const subscribe = useCallback(async () => {
     if (!isSupported || needsIOSInstall) return;
 
@@ -61,11 +70,16 @@ export function usePushNotifications() {
         });
       }
 
-      await fetch('/api/push/subscribe', {
+      const response = await fetch('/api/push/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(subscription.toJSON()),
       });
+      if (!response.ok) {
+        throw new Error(`El servidor rechazo la suscripcion (${response.status})`);
+      }
+
+      setIsSubscribed(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo activar las notificaciones');
     } finally {
@@ -73,5 +87,32 @@ export function usePushNotifications() {
     }
   }, [isSupported, needsIOSInstall]);
 
-  return { permission, isSupported, needsIOSInstall, loading, error, subscribe };
+  const unsubscribe = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const registration = await navigator.serviceWorker.getRegistration();
+      const subscription = await registration?.pushManager.getSubscription();
+      if (subscription) {
+        const endpoint = subscription.endpoint;
+        await subscription.unsubscribe();
+        await fetch('/api/push/subscribe', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ endpoint }),
+        });
+      }
+      setIsSubscribed(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo desactivar las notificaciones');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const toggle = useCallback(() => {
+    return isSubscribed ? unsubscribe() : subscribe();
+  }, [isSubscribed, subscribe, unsubscribe]);
+
+  return { permission, isSupported, needsIOSInstall, isSubscribed, loading, error, subscribe, unsubscribe, toggle };
 }
