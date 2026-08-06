@@ -140,7 +140,7 @@ export default function OrdersPage() {
           <div className="flex flex-col items-end gap-1 flex-shrink-0">
             {pushNotifications.needsIOSInstall ? (
               <p className="text-xs text-gray-500 text-right max-w-[160px]">
-                📲 Agregá la app a tu pantalla de inicio para recibir notificaciones
+                🔔 Agregá la app a tu pantalla de inicio para recibir notificaciones
               </p>
             ) : (
               <div className="flex items-center gap-2">

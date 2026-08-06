@@ -621,7 +621,7 @@ export default function DashboardPage() {
           <p className="text-sm">No hay pedidos pendientes</p>
           {pushNotifications.needsIOSInstall && (
             <p className="text-xs text-gray-400 mt-2 max-w-[220px]">
-              📲 Agregá OlivIA a tu pantalla de inicio para recibir notificaciones de nuevos pedidos
+              🔔 Agregá OlivIA a tu pantalla de inicio para recibir notificaciones de nuevos pedidos
             </p>
           )}
         </div>

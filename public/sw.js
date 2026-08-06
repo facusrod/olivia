@@ -22,13 +22,25 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const url = event.notification.data?.url || '/dashboard';
+  const path = event.notification.data?.url || '/dashboard';
+  const targetUrl = new URL(path, self.location.origin).href;
 
   event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+    (async () => {
+      const clientList = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
       const existing = clientList[0];
-      if (existing) return existing.navigate(url).then((client) => client.focus());
-      return self.clients.openWindow(url);
-    })
+
+      if (existing) {
+        try {
+          const navigated = await existing.navigate(targetUrl);
+          await (navigated || existing).focus();
+          return;
+        } catch (err) {
+          // navigate() no soportado o fallo (comun en Safari/iOS) - abrimos ventana nueva.
+        }
+      }
+
+      await self.clients.openWindow(targetUrl);
+    })()
   );
 });
