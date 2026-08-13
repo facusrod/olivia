@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
+import type { PipelineStage } from 'mongoose';
 import { authOptions } from '@/lib/auth-options';
 import { getOdooClient } from '@/lib/odoo';
 import connectDB from '@/lib/mongodb';
@@ -32,33 +33,58 @@ function getCurrentMonthArg(): string {
 }
 
 /**
- * Suma qty/valor de los snapshots diarios de vencidos del mes actual (hora Argentina).
- * Los snapshots ya existen antes de que el producto sea descartado en Odoo (ver cron
- * /api/cron/expired-products), así que esto no depende de una consulta en vivo a Odoo.
+ * Etapas compartidas: por cada lote (productId+lotName) que aparece vencido en algún
+ * snapshot diario del mes, se queda con su primera aparición (el día que originalmente
+ * venció). El cron no da de baja el lote al procesarlo, así que un mismo lote vencido
+ * puede repetirse en varios snapshots diarios seguidos — sin este dedup se sumaría su
+ * valor una vez por cada día que reaparece. Se toma la primera aparición y no la más
+ * reciente porque si luego se descartó parcialmente, la cantidad/valor de días
+ * posteriores ya no refleja lo que vencía originalmente.
+ */
+function dedupedExpiredItemsStages(monthStr: string): PipelineStage[] {
+  return [
+    { $match: { date: { $regex: `^${monthStr}` } } },
+    { $unwind: '$items' },
+    { $sort: { date: 1 } },
+    {
+      $group: {
+        _id: { productId: '$items.productId', lotName: '$items.lotName' },
+        category: { $first: '$items.category' },
+        qty: { $first: '$items.qty' },
+        value: { $first: '$items.totalValue' },
+      },
+    },
+  ];
+}
+
+/**
+ * Suma qty/valor, deduplicados por lote, de los snapshots diarios de vencidos del mes
+ * actual (hora Argentina). Los snapshots ya existen antes de que el producto sea
+ * descartado en Odoo (ver cron /api/cron/expired-products), así que esto no depende de
+ * una consulta en vivo a Odoo.
  */
 async function getExpiredMonthTotal(): Promise<{ qty: number; value: number }> {
   const monthStr = getCurrentMonthArg();
 
   const result = await ExpiredProductSnapshot.aggregate([
-    { $match: { date: { $regex: `^${monthStr}` } } },
-    { $group: { _id: null, qty: { $sum: '$totalQty' }, value: { $sum: '$totalValue' } } },
+    ...dedupedExpiredItemsStages(monthStr),
+    { $group: { _id: null, qty: { $sum: '$qty' }, value: { $sum: '$value' } } },
   ]);
 
   return result[0] ? { qty: result[0].qty, value: result[0].value } : { qty: 0, value: 0 };
 }
 
-/** Desglose por categoría de los vencidos del mes actual, ordenado de mayor a menor valor. */
+/** Desglose por categoría de los vencidos del mes actual, deduplicados por lote, ordenado de mayor a menor valor. */
 async function getExpiredCategoryBreakdown(): Promise<Array<{ category: string; qty: number; value: number }>> {
   const monthStr = getCurrentMonthArg();
 
   const result = await ExpiredProductSnapshot.aggregate([
-    { $match: { date: { $regex: `^${monthStr}` } } },
-    { $unwind: '$items' },
+    ...dedupedExpiredItemsStages(monthStr),
     {
       $group: {
-        _id: { $ifNull: ['$items.category', 'Sin categoría'] },
-        qty: { $sum: '$items.qty' },
-        value: { $sum: '$items.totalValue' },
+        _id: { $ifNull: ['$category', 'Sin categoría'] },
+        qty: { $sum: '$qty' },
+        value: { $sum: '$value' },
       },
     },
     { $sort: { value: -1 } },
