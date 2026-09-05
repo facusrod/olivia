@@ -24,6 +24,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Layers,
+  AlertCircle,
 } from 'lucide-react';
 import Modal from '@/components/Modal';
 import MonthlySalesChart from '@/components/MonthlySalesChart';
@@ -71,6 +72,7 @@ interface DashboardData {
   };
   salesHistory?: Array<{ month: string; pos: number; ecom: number; total: number }>;
   updatedAt: string;
+  cached?: boolean;
 }
 
 interface PendingOrder {
@@ -678,19 +680,30 @@ export default function DashboardPage() {
   return (
     <div className="p-4 md:p-6 space-y-4 md:space-y-6">
       {/* Status */}
-      <button
-        onClick={refreshDashboard}
-        disabled={refreshing}
-        className="flex items-center gap-2 text-xs sm:text-sm text-gray-500 hover:text-gray-700 transition-colors disabled:opacity-50 ml-auto"
-      >
-        {refreshing ? (
-          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-        ) : (
-          <div className={`w-2 h-2 rounded-full ${status.dotClass}`} />
-        )}
-        <span>{status.text}</span>
-        <span className="hidden sm:inline text-gray-400">· {status.dateShort}</span>
-      </button>
+      <div className="flex justify-end">
+        <div className="text-right">
+          <button
+            onClick={refreshDashboard}
+            disabled={refreshing}
+            className="flex items-center gap-2 text-xs sm:text-sm text-gray-500 hover:text-gray-700 transition-colors disabled:opacity-50"
+          >
+          {refreshing ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          ) : (
+            <div className={`w-2 h-2 rounded-full ${status.dotClass}`} />
+          )}
+          <div className="flex items-center gap-1">
+            <span>{status.text}</span>
+          </div>
+          <span className="hidden sm:inline text-gray-400">· {status.dateShort}</span>
+          </button>
+          {data.cached && (
+            <div className="text-xs text-amber-600 mt-1">
+              ⚠️ Datos en caché (posible error en servidor)
+            </div>
+          )}
+        </div>
+      </div>
 
       {isAdmin ? (
         <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">

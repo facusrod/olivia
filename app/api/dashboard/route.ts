@@ -25,6 +25,29 @@ async function getSalesHistory() {
   return MonthlySalesHistory.find().sort({ month: 1 }).lean();
 }
 
+/** Fallback cuando falla Odoo: devuelve último snapshot + historial o error. */
+async function getFallbackDashboardResponse() {
+  const lastSnapshot = await DashboardSnapshot.findOne()
+    .sort({ generatedAt: -1 })
+    .lean();
+
+  if (lastSnapshot) {
+    const salesHistory = await getSalesHistory();
+    console.warn('Odoo unavailable, returning cached snapshot from:', lastSnapshot.generatedAt);
+    return NextResponse.json({
+      sales: lastSnapshot.sales,
+      orders: lastSnapshot.orders,
+      inventory: lastSnapshot.inventory,
+      products: lastSnapshot.products,
+      salesHistory,
+      updatedAt: lastSnapshot.generatedAt,
+      cached: true,
+    });
+  }
+
+  return null;
+}
+
 /** Mes actual en formato "YYYY-MM", en hora Argentina. */
 function getCurrentMonthArg(): string {
   const ART_OFFSET = 3;
@@ -229,6 +252,9 @@ export async function GET(req: NextRequest) {
     });
   } catch (error: any) {
     console.error('Dashboard GET error:', error);
+    const fallback = await getFallbackDashboardResponse();
+    if (fallback) return fallback;
+
     return NextResponse.json(
       { error: error.message || 'Internal server error' },
       { status: 500 }
@@ -275,6 +301,9 @@ export async function POST(req: NextRequest) {
     });
   } catch (error: any) {
     console.error('Dashboard POST error:', error);
+    const fallback = await getFallbackDashboardResponse();
+    if (fallback) return fallback;
+
     return NextResponse.json(
       { error: error.message || 'Internal server error' },
       { status: 500 }
