@@ -117,10 +117,69 @@ async function getExpiredCategoryBreakdown(): Promise<Array<{ category: string; 
 }
 
 /**
+ * Suma buckets por hora en turnos Mañana (9-13h ART) y Tarde (resto).
+ */
+function reduceShifts(buckets: Array<{ hour: number; count: number; revenue: number }>) {
+  const morning = { revenue: 0, count: 0 };
+  const afternoon = { revenue: 0, count: 0 };
+  for (const b of buckets) {
+    const target = (b.hour >= 9 && b.hour < 13) ? morning : afternoon;
+    target.revenue += b.revenue;
+    target.count += b.count;
+  }
+  return { morning, afternoon };
+}
+
+/**
+ * Backfillea posMorning/posAfternoon en meses históricos que aún no los tengan.
+ * Corre una query por mes faltante (con concurrencia limitada). Idempotente.
+ */
+async function backfillPosShiftsIfNeeded() {
+  const missing = await MonthlySalesHistory.find(
+    { posMorning: { $exists: false } },
+    { month: 1 }
+  ).sort({ month: 1 }).lean();
+
+  if (missing.length === 0) return;
+
+  console.log(`🔄 Backfill de turnos PDV para ${missing.length} meses históricos`);
+  const odoo = getOdooClient();
+  const confirmedStates = ['sale', 'done', 'paid', 'invoiced'];
+  const ART_OFFSET = 3;
+  const limit = pLimit(3);
+
+  await Promise.all(missing.map((doc) => limit(async () => {
+    const [year, m] = doc.month.split('-').map((s) => parseInt(s, 10));
+    const start = new Date(Date.UTC(year, m - 1, 1, ART_OFFSET, 0, 0));
+    const end = new Date(Date.UTC(year, m, 1, ART_OFFSET, 0, 0));
+
+    const buckets = await timed(`backfill-${doc.month}`, odoo.getOrderStatsByHour('pos.order', [
+      ['date_order', '>=', start.toISOString()],
+      ['date_order', '<', end.toISOString()],
+      ['state', 'in', confirmedStates],
+    ]));
+
+    const { morning, afternoon } = reduceShifts(buckets);
+    await MonthlySalesHistory.updateOne(
+      { month: doc.month },
+      {
+        $set: {
+          posMorning: morning.revenue,
+          posAfternoon: afternoon.revenue,
+          posMorningCount: morning.count,
+          posAfternoonCount: afternoon.count,
+        },
+      }
+    );
+  })));
+}
+
+/**
  * Sincroniza el historial mensual de ventas en MongoDB.
  * - Primera vez (sin registros): fetch de toda la historia desde Odoo (2 RPC calls con groupby month).
  * - Siguientes veces: solo re-fetch del mes actual (2 RPC calls — reutiliza getPosOrderStats/getEcommerceOrderStats).
  * Los meses cerrados nunca se re-consultan a Odoo.
+ * Al final: backfillea turnos PDV en meses históricos que no los tengan (1 vez por mes).
  */
 async function syncMonthlySalesHistory() {
   const odoo = getOdooClient();
@@ -166,7 +225,7 @@ async function syncMonthlySalesHistory() {
     if (ops.length > 0) await MonthlySalesHistory.bulkWrite(ops);
   } else {
     // Solo actualizar el mes actual (meses pasados son inmutables)
-    const [posMonth, ecomMonth] = await Promise.all([
+    const [posMonth, ecomMonth, posMonthByHour] = await Promise.all([
       timed('monthlyPos-current', odoo.getPosOrderStats([
         ['date_order', '>=', startOfCurrentMonth.toISOString()],
         ['state', 'in', confirmedStates],
@@ -175,7 +234,13 @@ async function syncMonthlySalesHistory() {
         ['date_order', '>=', startOfCurrentMonth.toISOString()],
         ['state', 'in', confirmedStates],
       ])),
+      timed('monthlyPosByHour-current', odoo.getOrderStatsByHour('pos.order', [
+        ['date_order', '>=', startOfCurrentMonth.toISOString()],
+        ['state', 'in', confirmedStates],
+      ])),
     ]);
+
+    const { morning, afternoon } = reduceShifts(posMonthByHour);
 
     await MonthlySalesHistory.updateOne(
       { month: currentMonth },
@@ -187,11 +252,18 @@ async function syncMonthlySalesHistory() {
           total: posMonth.revenue + ecomMonth.revenue,
           posCount: posMonth.count,
           ecomCount: ecomMonth.count,
+          posMorning: morning.revenue,
+          posAfternoon: afternoon.revenue,
+          posMorningCount: morning.count,
+          posAfternoonCount: afternoon.count,
         },
       },
       { upsert: true }
     );
   }
+
+  // Backfill de meses históricos sin datos de turno (idempotente).
+  await backfillPosShiftsIfNeeded();
 }
 
 /**
@@ -372,6 +444,7 @@ async function generateDashboardData() {
     ecomMonth,
     posLastMonth,
     ecomLastMonth,
+    posMonthByHour,
   ] = await Promise.all([
     limit(() => timed('getProductSalesRanking', odoo.getProductSalesRanking(30, 50, 50))),
     limit(() => timed('getExpiringProducts', odoo.getExpiringProducts(30, 50))),
@@ -404,7 +477,24 @@ async function generateDashboardData() {
       ['date_order', '<=', endOfLastMonth.toISOString()],
       ['state', 'in', confirmedStates],
     ]))),
+    limit(() => timed('posMonthByHour', odoo.getOrderStatsByHour('pos.order', [
+      ['date_order', '>=', startOfMonth.toISOString()],
+      ['state', 'in', confirmedStates],
+    ]))),
   ]);
+
+  // Agregar ventas del mes por turno (POS). Mañana: 9-13h, Tarde: resto.
+  // Los buckets vienen con hora en ART.
+  const monthByShift = {
+    morning: { revenue: 0, count: 0 },
+    afternoon: { revenue: 0, count: 0 },
+  };
+  for (const bucket of posMonthByHour) {
+    const isMorning = bucket.hour >= 9 && bucket.hour < 13;
+    const target = isMorning ? monthByShift.morning : monthByShift.afternoon;
+    target.revenue += bucket.revenue;
+    target.count += bucket.count;
+  }
 
   // Totales combinados (lectura directa, sin parsing de fechas)
   const todayRevenue = posToday.revenue + ecomToday.revenue;
@@ -435,6 +525,7 @@ async function generateDashboardData() {
       lastMonth: lastMonthRevenue,
       growthPercentage,
       averageTicket,
+      monthByShift,
     },
     orders: {
       today: totalOrdersToday,

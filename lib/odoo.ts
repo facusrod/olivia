@@ -575,6 +575,54 @@ class OdooClient {
   }
 
   /**
+   * Agrupa órdenes por hora (usando date_order:hour) y devuelve totales por bucket.
+   * Cada bucket representa una hora específica de un día específico dentro del filtro.
+   * La hora retornada está convertida a ART (UTC-3) para que 9-13h signifique horario local.
+   */
+  async getOrderStatsByHour(
+    model: 'pos.order' | 'sale.order',
+    filters: any[]
+  ): Promise<Array<{ hour: number; count: number; revenue: number }>> {
+    const allFilters = model === 'sale.order'
+      ? [['website_id', '!=', false], ...filters]
+      : filters;
+
+    const result = await this.readGroup(
+      model,
+      allFilters,
+      ['amount_total'],
+      ['date_order:hour'],
+      { lazy: false, orderby: 'date_order asc' }
+    );
+
+    const ART_OFFSET = 3;
+    return result.map((row: any) => {
+      // Odoo agrega al __domain 2 condiciones para el bucket (>= inicio, < fin del bucket)
+      // ADEMÁS de los filtros originales. Tomamos el ÚLTIMO date_order:>= que es el del bucket.
+      // Alternativamente __range['date_order:hour'].from si está disponible (Odoo 12+).
+      let fromDate = '';
+      if (row.__range && row.__range['date_order:hour']?.from) {
+        fromDate = String(row.__range['date_order:hour'].from);
+      } else {
+        const domain: any[] = Array.isArray(row.__domain) ? row.__domain : [];
+        const dateConds = domain.filter(
+          (c: any) => Array.isArray(c) && c[0] === 'date_order' && c[1] === '>='
+        );
+        fromDate = dateConds.length > 0 ? String(dateConds[dateConds.length - 1][2]) : '';
+      }
+
+      // fromDate viene en UTC (formato "YYYY-MM-DD HH:mm:ss" o ISO). Convertir a ART.
+      const utcHour = fromDate ? new Date(fromDate.replace(' ', 'T') + 'Z').getUTCHours() : 0;
+      const hour = (utcHour - ART_OFFSET + 24) % 24;
+      return {
+        hour,
+        count: row.__count || 0,
+        revenue: row.amount_total || 0,
+      };
+    });
+  }
+
+  /**
    * Obtiene timestamps de órdenes para un modelo dado (pos.order o sale.order).
    * Retorna solo date_order para construir heatmaps sin traer datos pesados.
    */

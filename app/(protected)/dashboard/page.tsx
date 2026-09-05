@@ -40,6 +40,10 @@ interface DashboardData {
     lastMonth: number;
     growthPercentage: number;
     averageTicket: number;
+    monthByShift?: {
+      morning: { revenue: number; count: number };
+      afternoon: { revenue: number; count: number };
+    };
   };
   orders: {
     today: number;
@@ -70,7 +74,18 @@ interface DashboardData {
     expiring: Array<{ id: number; name: string; totalQty: number; expirationDate: string; lotName: string; daysUntilExpiration: number; totalValue: number }>;
     expiredByCategory?: Array<{ category: string; qty: number; value: number }>;
   };
-  salesHistory?: Array<{ month: string; pos: number; ecom: number; total: number }>;
+  salesHistory?: Array<{
+    month: string;
+    pos: number;
+    ecom: number;
+    total: number;
+    posCount?: number;
+    ecomCount?: number;
+    posMorning?: number;
+    posAfternoon?: number;
+    posMorningCount?: number;
+    posAfternoonCount?: number;
+  }>;
   updatedAt: string;
   cached?: boolean;
 }
@@ -501,6 +516,44 @@ export default function DashboardPage() {
       <p className="text-xs md:text-sm text-gray-500 mt-1 md:mt-2">
         vs {formatCurrency(data.sales.lastMonth)} mes anterior
       </p>
+      {(() => {
+        const shift = data.sales.monthByShift;
+        if (!shift) return null;
+        const total = shift.morning.revenue + shift.afternoon.revenue;
+        if (total <= 0) return null;
+        const morningPct = (shift.morning.revenue / total) * 100;
+        const afternoonPct = 100 - morningPct;
+        return (
+          <div className="mt-3 md:mt-4 pt-3 md:pt-4 border-t border-gray-100">
+            <div className="text-[10px] md:text-xs text-gray-400 mb-1.5">Distribución PDV por turno</div>
+            <div className="flex items-center justify-between text-[10px] md:text-xs mb-1.5">
+              <span className="text-gray-500">
+                Mañana <span className="font-semibold text-sky-600">{morningPct.toFixed(0)}%</span>
+              </span>
+              <span className="text-gray-500">
+                Tarde <span className="font-semibold text-orange-600">{afternoonPct.toFixed(0)}%</span>
+              </span>
+            </div>
+            <div className="h-2 rounded-full overflow-hidden bg-gray-100 flex">
+              <div className="bg-sky-500" style={{ width: `${morningPct}%` }} />
+              <div className="bg-orange-500" style={{ width: `${afternoonPct}%` }} />
+            </div>
+            <div className="flex items-center justify-between text-[10px] md:text-xs text-gray-500 mt-1.5">
+              <span>{formatCurrency(shift.morning.revenue)} · {shift.morning.count} ops</span>
+              <span>{formatCurrency(shift.afternoon.revenue)} · {shift.afternoon.count} ops</span>
+            </div>
+            {data.orders.ecommerce && data.orders.ecommerce.revenueMonth > 0 && (
+              <div className="flex items-center justify-between text-[10px] md:text-xs text-gray-500 mt-2 pt-2 border-t border-dashed border-gray-100">
+                <span className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                  Ecommerce
+                </span>
+                <span>{formatCurrency(data.orders.ecommerce.revenueMonth)} · {data.orders.ecommerce.month} ops</span>
+              </div>
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 

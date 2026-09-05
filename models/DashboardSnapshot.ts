@@ -7,6 +7,10 @@ export interface IDashboardSnapshot extends Document {
     lastMonth: number;
     growthPercentage: number;
     averageTicket: number;
+    monthByShift?: {
+      morning: { revenue: number; count: number };
+      afternoon: { revenue: number; count: number };
+    };
   };
   orders: {
     today: number;
@@ -61,6 +65,16 @@ const DashboardSnapshotSchema = new Schema<IDashboardSnapshot>(
       lastMonth: { type: Number, default: 0 },
       growthPercentage: { type: Number, default: 0 },
       averageTicket: { type: Number, default: 0 },
+      monthByShift: {
+        morning: {
+          revenue: { type: Number, default: 0 },
+          count: { type: Number, default: 0 },
+        },
+        afternoon: {
+          revenue: { type: Number, default: 0 },
+          count: { type: Number, default: 0 },
+        },
+      },
     },
     orders: {
       today: { type: Number, default: 0 },

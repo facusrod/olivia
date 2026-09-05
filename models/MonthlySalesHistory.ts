@@ -7,6 +7,10 @@ export interface IMonthlySalesHistory extends Document {
   total: number;
   posCount: number;
   ecomCount: number;
+  posMorning?: number;
+  posAfternoon?: number;
+  posMorningCount?: number;
+  posAfternoonCount?: number;
 }
 
 const MonthlySalesHistorySchema = new Schema<IMonthlySalesHistory>(
@@ -17,6 +21,10 @@ const MonthlySalesHistorySchema = new Schema<IMonthlySalesHistory>(
     total: { type: Number, default: 0 },
     posCount: { type: Number, default: 0 },
     ecomCount: { type: Number, default: 0 },
+    posMorning: { type: Number },
+    posAfternoon: { type: Number },
+    posMorningCount: { type: Number },
+    posAfternoonCount: { type: Number },
   },
   { timestamps: true }
 );
