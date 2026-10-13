@@ -4,6 +4,7 @@ import { signIn, useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState, Suspense } from 'react';
 import OliviaLogo from '@/components/OliviaLogo';
+import { ArrowUpRight, BarChart3, MessageSquare, Package, ShoppingCart } from 'lucide-react';
 
 function LoginContent() {
   const { data: session, status } = useSession();
@@ -38,15 +39,55 @@ function LoginContent() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-green-100">
-      <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full">
+    <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-green-100 px-4 py-10 sm:px-8">
+      <div className="grid w-full max-w-6xl items-center gap-10 lg:grid-cols-[1.4fr_1fr] lg:gap-16">
+        <section aria-labelledby="product-title">
+          <div className="mb-6 flex items-center gap-3 text-primary-700">
+            <OliviaLogo size={48} className="text-primary-500" />
+            <span className="text-2xl font-bold">OlivIA</span>
+          </div>
+          <p className="mb-3 text-sm font-semibold uppercase tracking-widest text-primary-700">Inteligencia artificial para la gestión diaria</p>
+          <h1 id="product-title" className="text-4xl font-bold leading-tight text-gray-900 sm:text-5xl">
+            Conocé tu tienda.<br />Decidí con información.
+          </h1>
+          <p className="mt-5 max-w-xl text-lg leading-relaxed text-gray-700">
+            Olivia es un asistente inteligente conectado a Odoo, creado para acompañar el día a día de Greenhouse, una tienda de productos saludables. Reúne información de productos, inventario y ventas para ayudarte a gestionar el negocio.
+          </p>
+          <ul className="mt-8 grid gap-5 sm:grid-cols-2">
+            {[
+              { icon: MessageSquare, title: 'Consultas en lenguaje natural', description: 'Preguntá por productos, opciones alimentarias, stock y ventas.' },
+              { icon: Package, title: 'Inventario actualizado', description: 'Consultá existencias en Odoo y detectá productos con stock bajo.' },
+              { icon: BarChart3, title: 'El negocio a la vista', description: 'Seguí las métricas de ventas y los productos próximos a vencer.' },
+              { icon: ShoppingCart, title: 'Compras con más contexto', description: 'Recibí sugerencias de compra basadas en las ventas y el stock.' },
+            ].map(({ icon: Icon, title, description }) => (
+              <li key={title} className="flex gap-3">
+                <Icon aria-hidden="true" className="mt-1 h-5 w-5 shrink-0 text-primary-700" />
+                <div>
+                  <h2 className="font-semibold text-gray-900">{title}</h2>
+                  <p className="mt-1 text-sm leading-relaxed text-gray-600">{description}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-8 border-t border-green-200 pt-6">
+            <p className="text-sm leading-relaxed text-gray-600">
+              Un producto de <span className="font-semibold text-gray-900">Facundo Rodriguez</span>, desarrollador de software y creador de soluciones para negocios reales.
+            </p>
+            <a href="https://rodriguezfacundo.com/" className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary-700 px-5 py-3 font-semibold text-white transition-colors hover:bg-primary-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-700">
+              Conocé mis otros proyectos
+              <ArrowUpRight aria-hidden="true" className="h-5 w-5" />
+            </a>
+            <p className="mt-3 text-sm text-gray-600">Contacto, experiencia profesional y CV en mi sitio web.</p>
+          </div>
+        </section>
+      <section aria-labelledby="login-title" className="bg-white p-6 sm:p-8 rounded-2xl shadow-xl w-full">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center mb-4">
             <OliviaLogo size={64} className="text-primary-500" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">OlivIA</h1>
+          <h2 id="login-title" className="text-2xl font-bold text-gray-900 mb-2">Ingresá a OlivIA</h2>
           <p className="text-gray-600">
-            Asistente inteligente para tu tienda de productos saludables
+            Accedé a las herramientas de gestión de tu tienda
           </p>
         </div>
 
@@ -90,8 +131,9 @@ function LoginContent() {
           <p>Sistema interno de gestión</p>
           <p className="mt-1">Solo para empleados autorizados</p>
         </div>
+      </section>
       </div>
-    </div>
+    </main>
   );
 }
 
